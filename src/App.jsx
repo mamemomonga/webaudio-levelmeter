@@ -70,7 +70,7 @@ export default function App() {
             <LoudnessMeter shortTerm={data.shortTerm} />
           </div>
           <div className="meters-side">
-            <LoudnessAdvice longTerm={data.longTerm} />
+            <LoudnessAdvice momentary={data.momentary} />
             <PeakLamp over={data.peakOver} truePeak={data.truePeak} />
             <StereoStatus mode={data.stereoMode} />
           </div>

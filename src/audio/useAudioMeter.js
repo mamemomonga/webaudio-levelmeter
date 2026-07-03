@@ -17,6 +17,11 @@ const PEAK_LAMP_HOLD_TIME = 3.0 // 秒
 const SMOOTH_TAU = 0.25
 // 有信号とみなす下限(dBFS相当)
 const ACTIVE_FLOOR = -55
+const SINGLE_CHANNEL_GAP = 30 // dB
+const CORRELATED_LEVEL_GAP = 3 // dB
+const MONO_DIFF_GAP = 24 // dB
+const MONO_CORRELATION = 0.95
+const INVERTED_CORRELATION = -0.95
 
 const AUDIO_CONSTRAINTS = {
   echoCancellation: false,
@@ -28,18 +33,22 @@ function safeDb(v) {
   return Number.isFinite(v) ? v : METER_FLOOR
 }
 
-// 平滑化済みエネルギーと相関からステレオ状態を判定する。
-function classifyStereo(eL, eR, corr) {
+// 平滑化済みエネルギー、L-R音量、相関からステレオ状態を判定する。
+function classifyStereo(eL, eR, eDiff, corr) {
   const levelL = eL > 0 ? 10 * Math.log10(eL) : -Infinity
   const levelR = eR > 0 ? 10 * Math.log10(eR) : -Infinity
+  const diffLevel = eDiff > 0 ? 10 * Math.log10(eDiff) : -Infinity
   const maxLevel = Math.max(levelL, levelR)
   const minLevel = Math.min(levelL, levelR)
+  const levelGap = maxLevel - minLevel
 
   if (maxLevel < ACTIVE_FLOOR) return 'silent'
-  // 片方が他方より40dB以上小さい → 片チャンネル
-  if (minLevel < maxLevel - 40 || minLevel < ACTIVE_FLOOR - 10) return 'single'
-  if (corr > 0.99) return 'mono'
-  if (corr < -0.99) return 'inverted'
+  if (minLevel < ACTIVE_FLOOR || levelGap >= SINGLE_CHANNEL_GAP) return 'single'
+  const diffIsSmall = diffLevel <= maxLevel - MONO_DIFF_GAP
+  if (levelGap <= CORRELATED_LEVEL_GAP && (corr >= MONO_CORRELATION || diffIsSmall)) {
+    return 'mono'
+  }
+  if (levelGap <= CORRELATED_LEVEL_GAP && corr <= INVERTED_CORRELATION) return 'inverted'
   return 'stereo'
 }
 
@@ -58,7 +67,6 @@ export function useAudioMeter() {
     holdR: METER_FLOOR,
     truePeak: METER_FLOOR,
     shortTerm: -Infinity,
-    longTerm: -Infinity,
     momentary: -Infinity,
     stereoMode: 'silent',
     peakOver: false,
@@ -73,7 +81,7 @@ export function useAudioMeter() {
 
   // rAFで維持する状態(ピークホールド・平滑化)
   const holdRef = useRef({ l: METER_FLOOR, r: METER_FLOOR, tL: 0, tR: 0 })
-  const smoothRef = useRef({ eL: 0, eR: 0, corr: 0 })
+  const smoothRef = useRef({ eL: 0, eR: 0, eDiff: 0, corr: 0 })
   const lastTimeRef = useRef(0)
 
   const stopStream = useCallback(() => {
@@ -217,8 +225,9 @@ export function useAudioMeter() {
       const a = dt > 0 ? 1 - Math.exp(-dt / SMOOTH_TAU) : 0
       sm.eL += (m.energyL - sm.eL) * a
       sm.eR += (m.energyR - sm.eR) * a
+      sm.eDiff += ((m.diffEnergy || 0) - sm.eDiff) * a
       sm.corr += (m.correlation - sm.corr) * a
-      const stereoMode = classifyStereo(sm.eL, sm.eR, sm.corr)
+      const stereoMode = classifyStereo(sm.eL, sm.eR, sm.eDiff, sm.corr)
 
       setData({
         peakL,
@@ -227,7 +236,6 @@ export function useAudioMeter() {
         holdR: hold.r,
         truePeak,
         shortTerm: m.shortTerm,
-        longTerm: m.longTerm,
         momentary: m.momentary,
         stereoMode,
         peakOver,

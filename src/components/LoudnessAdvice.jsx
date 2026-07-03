@@ -1,16 +1,16 @@
 import { TARGET_LUFS } from '../audio/useAudioMeter.js'
 
-// Long Termを基準に、初心者にも分かりやすい適正表示を出す。
+// モメンタリー(400ms)を基準に、初心者にも分かりやすい適正表示を出す。
 // ターゲット -14 LUFS を中心に「小さい」「ちょうどいい」「大きい」。
 const TOLERANCE = 2.0 // ±2 LU を「ちょうどいい」とする
 
-export default function LoudnessAdvice({ longTerm }) {
+export default function LoudnessAdvice({ momentary }) {
   let level // 'low' | 'ok' | 'high' | 'none'
-  if (!Number.isFinite(longTerm) || longTerm < -50) {
+  if (!Number.isFinite(momentary) || momentary < -50) {
     level = 'none'
-  } else if (longTerm < TARGET_LUFS - TOLERANCE) {
+  } else if (momentary < TARGET_LUFS - TOLERANCE) {
     level = 'low'
-  } else if (longTerm > TARGET_LUFS + TOLERANCE) {
+  } else if (momentary > TARGET_LUFS + TOLERANCE) {
     level = 'high'
   } else {
     level = 'ok'
@@ -25,7 +25,7 @@ export default function LoudnessAdvice({ longTerm }) {
   return (
     <div className="panel advice">
       <div className="panel-title">
-        適正レベル <span className="unit">Long Term</span>
+        適正レベル <span className="unit">Momentary</span>
       </div>
       <div className="advice-row">
         {items.map((it) => (

@@ -71,10 +71,6 @@ class MeterProcessor extends AudioWorkletProcessor {
     this.maxBlocks = 30 // ショートターム = 3秒 = 30ブロック
     this.momentary = -Infinity
     this.shortTerm = -Infinity
-    this.longTerm = -Infinity
-    this.totalSumL = 0
-    this.totalSumR = 0
-    this.totalCount = 0
 
     // トゥルーピーク用オーバーサンプラ
     this.buildOversampler()
@@ -96,6 +92,7 @@ class MeterProcessor extends AudioWorkletProcessor {
     this.sumL2 = 0
     this.sumR2 = 0
     this.sumLR = 0
+    this.sumDiff2 = 0
   }
 
   // 4倍オーバーサンプリング用ポリフェーズFIRを構築する。
@@ -177,12 +174,8 @@ class MeterProcessor extends AudioWorkletProcessor {
   pushBlock() {
     this.ring.push({ sumL: this.blockSumL, sumR: this.blockSumR, n: this.blockCount })
     if (this.ring.length > this.maxBlocks) this.ring.shift()
-    this.totalSumL += this.blockSumL
-    this.totalSumR += this.blockSumR
-    this.totalCount += this.blockCount
     this.momentary = this.loudnessOver(4) // 400ms
     this.shortTerm = this.loudnessOver(30) // 3s
-    this.longTerm = this.loudnessFromSums(this.totalSumL, this.totalSumR, this.totalCount)
     this.blockSumL = 0
     this.blockSumR = 0
     this.blockCount = 0
@@ -223,9 +216,9 @@ class MeterProcessor extends AudioWorkletProcessor {
       truePeakR: toDb(this.tpLinR),
       momentary: this.momentary,
       shortTerm: this.shortTerm,
-      longTerm: this.longTerm,
       energyL: this.sumL2,
       energyR: this.sumR2,
+      diffEnergy: this.sumDiff2,
       correlation,
     })
 
@@ -254,6 +247,8 @@ class MeterProcessor extends AudioWorkletProcessor {
       this.sumL2 += l * l
       this.sumR2 += r * r
       this.sumLR += l * r
+      const diff = (l - r) * 0.5
+      this.sumDiff2 += diff * diff
 
       const tpl = this.overSamplePeak(this.tpL, l)
       const tpr = this.overSamplePeak(this.tpR, r)

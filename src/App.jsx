@@ -5,6 +5,7 @@ import LoudnessMeter from './components/LoudnessMeter.jsx'
 import LoudnessAdvice from './components/LoudnessAdvice.jsx'
 import PeakLamp from './components/PeakLamp.jsx'
 import StereoStatus from './components/StereoStatus.jsx'
+import UsageGuide from './components/UsageGuide.jsx'
 import './App.css'
 
 export default function App() {
@@ -73,6 +74,7 @@ export default function App() {
             <LoudnessAdvice momentary={data.momentary} />
             <PeakLamp over={data.peakOver} truePeak={data.truePeak} />
             <StereoStatus mode={data.stereoMode} />
+            <UsageGuide />
           </div>
         </main>
       )}

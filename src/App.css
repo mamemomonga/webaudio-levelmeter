@@ -408,6 +408,27 @@
   color: var(--text-faint);
 }
 
+/* ---------- 使い方ガイド ---------- */
+.usage-guide {
+  gap: 14px;
+}
+.guide-item {
+  display: grid;
+  gap: 4px;
+}
+.guide-title {
+  font-family: var(--scale-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text);
+}
+.guide-body {
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--text-dim);
+}
+
 /* ---------- フッタ ---------- */
 .app-footer {
   display: flex;

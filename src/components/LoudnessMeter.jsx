@@ -1,0 +1,46 @@
+import { TARGET_LUFS } from '../audio/useAudioMeter.js'
+import { fmtDb } from '../lib/scale.js'
+
+// ラウドネスメータのスケール(LUFS)
+const LU_TOP = 0
+const LU_FLOOR = -36
+
+const TICKS = [0, -6, -14, -20, -28, -36]
+
+function luToPct(lufs) {
+  if (!Number.isFinite(lufs)) return 0
+  const p = ((lufs - LU_FLOOR) / (LU_TOP - LU_FLOOR)) * 100
+  return Math.max(0, Math.min(100, p))
+}
+
+// ショートターム値を表示するラウドネスメータ。ターゲットは -14 LUFS。
+export default function LoudnessMeter({ shortTerm }) {
+  const pct = luToPct(shortTerm)
+  const targetPct = luToPct(TARGET_LUFS)
+
+  return (
+    <div className="panel loudness-meter">
+      <div className="panel-title">
+        LOUDNESS <span className="unit">LUFS / Short&nbsp;Term</span>
+      </div>
+      <div className="lm-body">
+        <div className="lm-scale">
+          {TICKS.map((t) => (
+            <div key={t} className="lm-tick" style={{ bottom: `${luToPct(t)}%` }}>
+              <span>{t}</span>
+            </div>
+          ))}
+        </div>
+        <div className="lm-track">
+          <div className="lm-fill" style={{ height: `${pct}%` }} />
+          <div className="lm-target" style={{ bottom: `${targetPct}%` }}>
+            <span>-14</span>
+          </div>
+        </div>
+      </div>
+      <div className="lm-readout">
+        {fmtDb(shortTerm)} <span className="unit">LUFS</span>
+      </div>
+    </div>
+  )
+}

@@ -1,12 +1,12 @@
 import { TRUE_PEAK_LIMIT } from '../audio/useAudioMeter.js'
 import { fmtDb } from '../lib/scale.js'
 
-// -1.0dBTP を超えたら点灯し、リセットまで保持するピークランプ。
-export default function PeakLamp({ over, truePeak, onReset }) {
+// -1.0dBTP を超えたら点灯し、3秒保持するピークランプ。
+export default function PeakLamp({ over, truePeak }) {
   return (
     <div className="panel peak-lamp">
       <div className="panel-title">
-        PEAK <span className="unit">-1.0 dBTP</span>
+        PEAK <span className="unit">-1.0 dBTP / 3s HOLD</span>
       </div>
       <div className="pl-body">
         <div className={`pl-led ${over ? 'on' : ''}`} aria-hidden="true" />
@@ -14,9 +14,6 @@ export default function PeakLamp({ over, truePeak, onReset }) {
           <div className="pl-status">{over ? 'OVER' : 'OK'}</div>
           <div className="pl-tp">TP {fmtDb(truePeak)} dB</div>
         </div>
-        <button className="pl-reset" onClick={onReset} disabled={!over}>
-          RESET
-        </button>
       </div>
     </div>
   )

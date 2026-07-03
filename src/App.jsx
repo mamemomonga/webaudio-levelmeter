@@ -17,7 +17,6 @@ export default function App() {
     data,
     start,
     selectDevice,
-    resetPeak,
   } = useAudioMeter()
 
   return (
@@ -71,12 +70,8 @@ export default function App() {
             <LoudnessMeter shortTerm={data.shortTerm} />
           </div>
           <div className="meters-side">
-            <LoudnessAdvice momentary={data.momentary} />
-            <PeakLamp
-              over={data.peakOver}
-              truePeak={data.truePeak}
-              onReset={resetPeak}
-            />
+            <LoudnessAdvice longTerm={data.longTerm} />
+            <PeakLamp over={data.peakOver} truePeak={data.truePeak} />
             <StereoStatus mode={data.stereoMode} />
           </div>
         </main>

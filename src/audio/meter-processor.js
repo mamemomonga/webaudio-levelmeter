@@ -71,6 +71,10 @@ class MeterProcessor extends AudioWorkletProcessor {
     this.maxBlocks = 30 // ショートターム = 3秒 = 30ブロック
     this.momentary = -Infinity
     this.shortTerm = -Infinity
+    this.longTerm = -Infinity
+    this.totalSumL = 0
+    this.totalSumR = 0
+    this.totalCount = 0
 
     // トゥルーピーク用オーバーサンプラ
     this.buildOversampler()
@@ -173,11 +177,23 @@ class MeterProcessor extends AudioWorkletProcessor {
   pushBlock() {
     this.ring.push({ sumL: this.blockSumL, sumR: this.blockSumR, n: this.blockCount })
     if (this.ring.length > this.maxBlocks) this.ring.shift()
+    this.totalSumL += this.blockSumL
+    this.totalSumR += this.blockSumR
+    this.totalCount += this.blockCount
     this.momentary = this.loudnessOver(4) // 400ms
     this.shortTerm = this.loudnessOver(30) // 3s
+    this.longTerm = this.loudnessFromSums(this.totalSumL, this.totalSumR, this.totalCount)
     this.blockSumL = 0
     this.blockSumR = 0
     this.blockCount = 0
+  }
+
+  // 合計エネルギーからラウドネス(LUFS)を算出する。
+  loudnessFromSums(sL, sR, n) {
+    if (n === 0) return -Infinity
+    const sum = sL / n + sR / n // 前方2ch は重み G=1.0
+    if (sum <= 0) return -Infinity
+    return -0.691 + 10 * Math.log10(sum)
   }
 
   // 直近 count ブロックからラウドネス(LUFS)を算出する。
@@ -191,10 +207,7 @@ class MeterProcessor extends AudioWorkletProcessor {
       sR += this.ring[i].sumR
       nn += this.ring[i].n
     }
-    if (nn === 0) return -Infinity
-    const sum = sL / nn + sR / nn // 前方2ch は重み G=1.0
-    if (sum <= 0) return -Infinity
-    return -0.691 + 10 * Math.log10(sum)
+    return this.loudnessFromSums(sL, sR, nn)
   }
 
   postUpdate() {
@@ -210,6 +223,7 @@ class MeterProcessor extends AudioWorkletProcessor {
       truePeakR: toDb(this.tpLinR),
       momentary: this.momentary,
       shortTerm: this.shortTerm,
+      longTerm: this.longTerm,
       energyL: this.sumL2,
       energyR: this.sumR2,
       correlation,

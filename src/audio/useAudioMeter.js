@@ -11,6 +11,7 @@ export const TARGET_LUFS = -14
 // ピークホールドの挙動
 const HOLD_TIME = 1.2 // 秒
 const RELEASE_RATE = 14 // dB/秒
+const PEAK_LAMP_HOLD_TIME = 3.0 // 秒
 
 // ステレオ判定・エネルギー平滑化の時定数(秒)
 const SMOOTH_TAU = 0.25
@@ -57,6 +58,7 @@ export function useAudioMeter() {
     holdR: METER_FLOOR,
     truePeak: METER_FLOOR,
     shortTerm: -Infinity,
+    longTerm: -Infinity,
     momentary: -Infinity,
     stereoMode: 'silent',
     peakOver: false,
@@ -67,7 +69,7 @@ export function useAudioMeter() {
   const streamRef = useRef(null)
   const latestRef = useRef(null) // worklet からの最新メッセージ
   const rafRef = useRef(0)
-  const peakOverRef = useRef(false)
+  const peakOverUntilRef = useRef(0)
 
   // rAFで維持する状態(ピークホールド・平滑化)
   const holdRef = useRef({ l: METER_FLOOR, r: METER_FLOOR, tL: 0, tR: 0 })
@@ -173,11 +175,6 @@ export function useAudioMeter() {
     [connect]
   )
 
-  const resetPeak = useCallback(() => {
-    peakOverRef.current = false
-    setData((d) => ({ ...d, peakOver: false }))
-  }, [])
-
   // rAFループ: ピークホールド減衰・平滑化・状態更新
   const startLoop = useCallback(() => {
     const loop = (now) => {
@@ -210,9 +207,10 @@ export function useAudioMeter() {
         }
       }
 
-      // トゥルーピーク(L/R最大)と -1.0dBTP 超過ラッチ
+      // トゥルーピーク(L/R最大)と -1.0dBTP 超過後3秒のランプ保持
       const truePeak = Math.max(safeDb(m.truePeakL), safeDb(m.truePeakR))
-      if (truePeak > TRUE_PEAK_LIMIT) peakOverRef.current = true
+      if (truePeak > TRUE_PEAK_LIMIT) peakOverUntilRef.current = t + PEAK_LAMP_HOLD_TIME
+      const peakOver = t < peakOverUntilRef.current
 
       // エネルギー・相関の平滑化
       const sm = smoothRef.current
@@ -229,9 +227,10 @@ export function useAudioMeter() {
         holdR: hold.r,
         truePeak,
         shortTerm: m.shortTerm,
+        longTerm: m.longTerm,
         momentary: m.momentary,
         stereoMode,
-        peakOver: peakOverRef.current,
+        peakOver,
       })
     }
     rafRef.current = requestAnimationFrame(loop)
@@ -262,6 +261,5 @@ export function useAudioMeter() {
     data,
     start,
     selectDevice,
-    resetPeak,
   }
 }

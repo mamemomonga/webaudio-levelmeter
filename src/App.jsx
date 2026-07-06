@@ -68,10 +68,10 @@ export default function App() {
               holdL={data.holdL}
               holdR={data.holdR}
             />
-            <LoudnessMeter shortTerm={data.shortTerm} />
+            <LoudnessMeter momentary={data.momentary} />
           </div>
           <div className="meters-side">
-            <LoudnessAdvice momentary={data.momentary} />
+            <LoudnessAdvice shortTerm={data.shortTerm} />
             <PeakLamp over={data.peakOver} truePeak={data.truePeak} />
             <StereoStatus mode={data.stereoMode} />
             <UsageGuide />
@@ -80,7 +80,7 @@ export default function App() {
       )}
 
       <footer className="app-footer">
-        <span>Target -14 LUFS</span>
+        <span>Target -15 LUFS</span>
         <span>ITU-R BS.1770</span>
         <span>True Peak -1.0 dBTP</span>
       </footer>

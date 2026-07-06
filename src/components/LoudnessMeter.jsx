@@ -5,7 +5,7 @@ import { fmtDb } from '../lib/scale.js'
 const LU_TOP = 0
 const LU_FLOOR = -36
 
-const TICKS = [0, -6, -14, -20, -28, -36]
+const TICKS = [0, -6, -15, -20, -28, -36]
 
 function luToPct(lufs) {
   if (!Number.isFinite(lufs)) return 0
@@ -13,15 +13,15 @@ function luToPct(lufs) {
   return Math.max(0, Math.min(100, p))
 }
 
-// ショートターム値を表示するラウドネスメータ。ターゲットは -14 LUFS。
-export default function LoudnessMeter({ shortTerm }) {
-  const pct = luToPct(shortTerm)
+// モメンタリー値を表示するラウドネスメータ。ターゲットは -15 LUFS。
+export default function LoudnessMeter({ momentary }) {
+  const pct = luToPct(momentary)
   const targetPct = luToPct(TARGET_LUFS)
 
   return (
     <div className="panel loudness-meter">
       <div className="panel-title">
-        LOUDNESS <span className="unit">LUFS / Short&nbsp;Term</span>
+        LOUDNESS <span className="unit">LUFS / Momentary</span>
       </div>
       <div className="lm-body">
         <div className="lm-scale">
@@ -34,12 +34,12 @@ export default function LoudnessMeter({ shortTerm }) {
         <div className="lm-track">
           <div className="lm-fill" style={{ height: `${pct}%` }} />
           <div className="lm-target" style={{ bottom: `${targetPct}%` }}>
-            <span>-14</span>
+            <span>-15</span>
           </div>
         </div>
       </div>
       <div className="lm-readout">
-        {fmtDb(shortTerm)} <span className="unit">LUFS</span>
+        {fmtDb(momentary)} <span className="unit">LUFS</span>
       </div>
     </div>
   )

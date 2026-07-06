@@ -6,7 +6,7 @@ export const METER_FLOOR = -60
 // トゥルーピークの上限しきい値(dBTP)
 export const TRUE_PEAK_LIMIT = -1.0
 // ラウドネスのターゲット(LUFS)
-export const TARGET_LUFS = -14
+export const TARGET_LUFS = -15
 
 // ピークホールドの挙動
 const HOLD_TIME = 1.2 // 秒
@@ -215,7 +215,7 @@ export function useAudioMeter() {
         }
       }
 
-      // トゥルーピーク(L/R最大)と -1.0dBTP 超過後3秒のランプ保持
+      // トゥルーピーク(L/R最大)と -1.0dBTP 超過後のランプ保持
       const truePeak = Math.max(safeDb(m.truePeakL), safeDb(m.truePeakR))
       if (truePeak > TRUE_PEAK_LIMIT) peakOverUntilRef.current = t + PEAK_LAMP_HOLD_TIME
       const peakOver = t < peakOverUntilRef.current

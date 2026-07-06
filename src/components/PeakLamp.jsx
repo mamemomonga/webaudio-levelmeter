@@ -6,7 +6,7 @@ export default function PeakLamp({ over, truePeak }) {
   return (
     <div className="panel peak-lamp">
       <div className="panel-title">
-        PEAK <span className="unit">-1.0 dBTP / 3s HOLD</span>
+        PEAK <span className="unit">-1.0 dBTP / 1s HOLD</span>
       </div>
       <div className="pl-body">
         <div className={`pl-led ${over ? 'on' : ''}`} aria-hidden="true" />

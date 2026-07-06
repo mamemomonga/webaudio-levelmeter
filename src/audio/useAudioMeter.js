@@ -11,7 +11,7 @@ export const TARGET_LUFS = -14
 // ピークホールドの挙動
 const HOLD_TIME = 1.2 // 秒
 const RELEASE_RATE = 14 // dB/秒
-const PEAK_LAMP_HOLD_TIME = 1.0 // 秒
+const PEAK_LAMP_HOLD_TIME = 0.5 // 秒
 
 // ステレオ判定・エネルギー平滑化の時定数(秒)
 const SMOOTH_TAU = 0.25

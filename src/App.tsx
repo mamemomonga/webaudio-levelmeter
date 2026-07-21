@@ -4,6 +4,7 @@ import PeakMeter from './components/PeakMeter'
 import LoudnessMeter from './components/LoudnessMeter'
 import LoudnessAdvice from './components/LoudnessAdvice'
 import PeakLamp from './components/PeakLamp'
+import PhaseScope from './components/PhaseScope'
 import StereoStatus from './components/StereoStatus'
 import TestToneGenerator from './components/TestToneGenerator'
 import UsageGuide from './components/UsageGuide'
@@ -78,6 +79,7 @@ export default function App() {
             <TestToneGenerator />
             <PeakLamp over={data.peakOver} truePeak={data.truePeak} />
             <StereoStatus mode={data.stereoMode} />
+            <PhaseScope samples={data.phaseScope} />
             <UsageGuide />
           </div>
         </main>

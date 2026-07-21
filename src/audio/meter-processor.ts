@@ -38,6 +38,10 @@ type OversamplerState = {
   pos: number
 }
 
+const PHASE_SCOPE_POINTS = 96
+const PHASE_SCOPE_TARGET_RATE = 2400
+const PHASE_SCOPE_ROTATION = Math.SQRT1_2
+
 // ITU-R BS.1770 K特性フィルタ係数(サンプルレート依存)を算出する。
 function kWeightingCoeffs(fs: number): [BiquadCoeffs, BiquadCoeffs] {
   // ステージ1: ハイシェルフ(頭部・胴体の音響効果を模擬)
@@ -104,11 +108,16 @@ class MeterProcessor extends AudioWorkletProcessor {
   private sumR2 = 0
   private sumLR = 0
   private sumDiff2 = 0
+  private phaseScope = new Float32Array(PHASE_SCOPE_POINTS * 2)
+  private phaseScopeCount = 0
+  private phaseScopeStride: number
+  private phaseScopeSkip = 0
 
   constructor() {
     super()
     const fs = sampleRate
     this.fs = fs
+    this.phaseScopeStride = Math.max(1, Math.floor(fs / PHASE_SCOPE_TARGET_RATE))
 
     const [c1, c2] = kWeightingCoeffs(fs)
     this.c1 = c1
@@ -151,6 +160,7 @@ class MeterProcessor extends AudioWorkletProcessor {
     this.sumR2 = 0
     this.sumLR = 0
     this.sumDiff2 = 0
+    this.phaseScopeCount = 0
   }
 
   // 4倍オーバーサンプリング用ポリフェーズFIRを構築する。
@@ -278,6 +288,7 @@ class MeterProcessor extends AudioWorkletProcessor {
       energyR: this.sumR2,
       diffEnergy: this.sumDiff2,
       correlation,
+      phaseScope: this.phaseScope.slice(0, this.phaseScopeCount * 2),
     })
 
     this.resetPostAccum()
@@ -307,6 +318,18 @@ class MeterProcessor extends AudioWorkletProcessor {
       this.sumLR += l * r
       const diff = (l - r) * 0.5
       this.sumDiff2 += diff * diff
+
+      this.phaseScopeSkip++
+      if (
+        this.phaseScopeSkip >= this.phaseScopeStride &&
+        this.phaseScopeCount < PHASE_SCOPE_POINTS
+      ) {
+        this.phaseScopeSkip = 0
+        const scopeIndex = this.phaseScopeCount * 2
+        this.phaseScope[scopeIndex] = (l - r) * PHASE_SCOPE_ROTATION
+        this.phaseScope[scopeIndex + 1] = (l + r) * PHASE_SCOPE_ROTATION
+        this.phaseScopeCount++
+      }
 
       const tpl = this.overSamplePeak(this.tpL, l)
       const tpr = this.overSamplePeak(this.tpR, r)

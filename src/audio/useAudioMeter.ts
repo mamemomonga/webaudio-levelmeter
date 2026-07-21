@@ -45,6 +45,7 @@ export type MeterData = {
   peakOver: boolean
   peakReadoutL: number
   peakReadoutR: number
+  phaseScope: Float32Array
 }
 
 type ProcessorMessage = {
@@ -58,6 +59,7 @@ type ProcessorMessage = {
   energyR: number
   diffEnergy?: number
   correlation: number
+  phaseScope?: Float32Array
 }
 
 type HoldState = {
@@ -134,6 +136,7 @@ export function useAudioMeter() {
     peakOver: false,
     peakReadoutL: METER_FLOOR,
     peakReadoutR: METER_FLOOR,
+    phaseScope: new Float32Array(0),
   })
 
   const ctxRef = useRef<AudioContext | null>(null)
@@ -335,6 +338,7 @@ export function useAudioMeter() {
         peakOver,
         peakReadoutL: readout.displayL,
         peakReadoutR: readout.displayR,
+        phaseScope: m.phaseScope ?? new Float32Array(0),
       })
     }
     rafRef.current = requestAnimationFrame(loop)

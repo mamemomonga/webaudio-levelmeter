@@ -12,6 +12,7 @@ export const TARGET_LUFS = -15
 const HOLD_TIME = 1.2 // 秒
 const RELEASE_RATE = 14 // dB/秒
 const PEAK_LAMP_HOLD_TIME = 0.5 // 秒
+const PEAK_READOUT_INTERVAL = 1.0 // 秒
 
 // ステレオ判定・エネルギー平滑化の時定数(秒)
 const SMOOTH_TAU = 0.25
@@ -42,6 +43,8 @@ export type MeterData = {
   momentary: number
   stereoMode: StereoMode
   peakOver: boolean
+  peakReadoutL: number
+  peakReadoutR: number
 }
 
 type ProcessorMessage = {
@@ -69,6 +72,14 @@ type SmoothState = {
   eR: number
   eDiff: number
   corr: number
+}
+
+type PeakReadoutState = {
+  l: number
+  r: number
+  nextAt: number
+  displayL: number
+  displayR: number
 }
 
 function errorMessage(err: unknown): string {
@@ -121,6 +132,8 @@ export function useAudioMeter() {
     momentary: -Infinity,
     stereoMode: 'silent',
     peakOver: false,
+    peakReadoutL: METER_FLOOR,
+    peakReadoutR: METER_FLOOR,
   })
 
   const ctxRef = useRef<AudioContext | null>(null)
@@ -133,6 +146,13 @@ export function useAudioMeter() {
   // rAFで維持する状態(ピークホールド・平滑化)
   const holdRef = useRef<HoldState>({ l: METER_FLOOR, r: METER_FLOOR, tL: 0, tR: 0 })
   const smoothRef = useRef<SmoothState>({ eL: 0, eR: 0, eDiff: 0, corr: 0 })
+  const peakReadoutRef = useRef<PeakReadoutState>({
+    l: METER_FLOOR,
+    r: METER_FLOOR,
+    nextAt: 0,
+    displayL: METER_FLOOR,
+    displayR: METER_FLOOR,
+  })
   const lastTimeRef = useRef(0)
 
   const stopStream = useCallback(() => {
@@ -257,6 +277,18 @@ export function useAudioMeter() {
       const peakL = safeDb(m.peakL)
       const peakR = safeDb(m.peakR)
 
+      const readout = peakReadoutRef.current
+      if (!readout.nextAt) readout.nextAt = t + PEAK_READOUT_INTERVAL
+      readout.l = Math.max(readout.l, peakL)
+      readout.r = Math.max(readout.r, peakR)
+      if (t >= readout.nextAt) {
+        readout.displayL = readout.l
+        readout.displayR = readout.r
+        readout.l = METER_FLOOR
+        readout.r = METER_FLOOR
+        readout.nextAt = t + PEAK_READOUT_INTERVAL
+      }
+
       // ピークホールド(L/R)
       const hold = holdRef.current
       const channels: Array<{ ch: 'l' | 'r'; val: number }> = [
@@ -301,6 +333,8 @@ export function useAudioMeter() {
         momentary: m.momentary,
         stereoMode,
         peakOver,
+        peakReadoutL: readout.displayL,
+        peakReadoutR: readout.displayR,
       })
     }
     rafRef.current = requestAnimationFrame(loop)

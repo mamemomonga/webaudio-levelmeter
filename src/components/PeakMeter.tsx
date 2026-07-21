@@ -5,7 +5,7 @@ import { dbToPct, fmtDb } from '../lib/scale'
 const TICKS = [0, -3, -6, -12, -18, -24, -36, -48, -60]
 
 // dBゾーンに対応した色配置(下:緑 → 上:赤)
-const GRADIENT = `linear-gradient(to top,
+const GRADIENT = `linear-gradient(to right,
   var(--green) 0%,
   var(--green) ${dbToPct(-18)}%,
   var(--yellow) ${dbToPct(-12)}%,
@@ -26,6 +26,8 @@ type PeakMeterProps = {
   peakR: number
   holdL: number
   holdR: number
+  readoutL: number
+  readoutR: number
 }
 
 function Bar({ label, level, hold }: BarProps) {
@@ -33,44 +35,51 @@ function Bar({ label, level, hold }: BarProps) {
   const holdPct = dbToPct(hold)
   return (
     <div className="pm-bar">
+      <div className="pm-chlabel">{label}</div>
       <div className="pm-track">
         <div className="pm-grad-dim" style={{ background: GRADIENT }} />
         <div
           className="pm-grad-lit"
           style={{
             background: GRADIENT,
-            clipPath: `inset(${100 - levelPct}% 0 0 0)`,
+            clipPath: `inset(0 ${100 - levelPct}% 0 0)`,
           }}
         />
         {hold > METER_FLOOR && (
-          <div className="pm-hold" style={{ bottom: `${holdPct}%` }} />
+          <div className="pm-hold" style={{ left: `${holdPct}%` }} />
         )}
       </div>
-      <div className="pm-chlabel">{label}</div>
     </div>
   )
 }
 
-export default function PeakMeter({ peakL, peakR, holdL, holdR }: PeakMeterProps) {
+export default function PeakMeter({
+  peakL,
+  peakR,
+  holdL,
+  holdR,
+  readoutL,
+  readoutR,
+}: PeakMeterProps) {
   return (
     <div className="panel peak-meter">
       <div className="panel-title">
-        PEAK <span className="unit">dBFS</span>
+        PEAK <span className="unit">dBFS / 1s MAX</span>
       </div>
       <div className="pm-body">
+        <Bar label="L" level={peakL} hold={holdL} />
+        <Bar label="R" level={peakR} hold={holdR} />
         <div className="pm-scale">
           {TICKS.map((t) => (
-            <div key={t} className="pm-tick" style={{ bottom: `${dbToPct(t)}%` }}>
+            <div key={t} className="pm-tick" style={{ left: `${dbToPct(t)}%` }}>
               <span>{t}</span>
             </div>
           ))}
         </div>
-        <Bar label="L" level={peakL} hold={holdL} />
-        <Bar label="R" level={peakR} hold={holdR} />
       </div>
       <div className="pm-readout">
-        <span>L {fmtDb(peakL)}</span>
-        <span>R {fmtDb(peakR)}</span>
+        <span>L {fmtDb(readoutL)}</span>
+        <span>R {fmtDb(readoutR)}</span>
       </div>
     </div>
   )

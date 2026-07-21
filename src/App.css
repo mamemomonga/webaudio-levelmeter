@@ -132,9 +132,10 @@
 }
 .meters-top {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: 1fr;
   gap: 16px;
   min-height: 0;
+  align-content: start;
 }
 .meters-side {
   display: flex;
@@ -167,40 +168,41 @@
 
 /* ---------- ピークメータ ---------- */
 .peak-meter {
-  min-height: 360px;
+  min-height: 180px;
 }
 .pm-body {
   flex: 1;
-  display: flex;
-  gap: 6px;
-  min-height: 260px;
-  padding: 4px 0;
+  display: grid;
+  grid-template-rows: repeat(2, 34px) 24px;
+  gap: 8px;
+  min-height: 100px;
+  padding: 4px 0 0;
 }
 .pm-scale {
   position: relative;
-  width: 26px;
+  height: 20px;
+  margin-left: 26px;
+  margin-right: 6px;
   font-family: var(--scale-mono);
   font-size: 10px;
   color: var(--text-faint);
 }
 .pm-tick {
   position: absolute;
-  right: 2px;
-  transform: translateY(50%);
+  top: 0;
+  transform: translateX(-50%);
 }
 .pm-bar {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 6px;
-  flex: 1;
-  min-width: 22px;
+  gap: 8px;
+  min-height: 34px;
 }
 .pm-track {
   position: relative;
-  width: 100%;
-  max-width: 46px;
   flex: 1;
+  height: 28px;
   border-radius: 4px;
   overflow: hidden;
   background: #0e1012;
@@ -211,7 +213,7 @@
   inset: 0;
   opacity: 0.16;
 }
-/* 明るい側は常にトラック全体を覆い、clip-path で下から点灯量を切り出す。
+/* 明るい側は常にトラック全体を覆い、clip-path で左から点灯量を切り出す。
    これによりゾーン色がバー高に依らず固定される。 */
 .pm-grad-lit {
   position: absolute;
@@ -220,15 +222,18 @@
 }
 .pm-hold {
   position: absolute;
-  left: 0;
-  right: 0;
-  height: 2px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  transform: translateX(-50%);
   background: #fff;
   box-shadow: 0 0 4px rgba(255, 255, 255, 0.6);
 }
 .pm-chlabel {
+  width: 18px;
   font-family: var(--scale-mono);
-  font-size: 11px;
+  font-size: 12px;
+  text-align: center;
   color: var(--text-dim);
 }
 .pm-readout {
@@ -242,31 +247,32 @@
 
 /* ---------- ラウドネスメータ ---------- */
 .loudness-meter {
-  min-height: 360px;
+  min-height: 150px;
 }
 .lm-body {
   flex: 1;
-  display: flex;
-  gap: 6px;
-  min-height: 260px;
-  padding: 4px 0;
+  display: grid;
+  grid-template-rows: 34px 24px;
+  gap: 8px;
+  min-height: 72px;
+  padding: 4px 0 0;
 }
 .lm-scale {
   position: relative;
-  width: 26px;
+  height: 20px;
   font-family: var(--scale-mono);
   font-size: 10px;
   color: var(--text-faint);
 }
 .lm-tick {
   position: absolute;
-  right: 2px;
-  transform: translateY(50%);
+  top: 0;
+  transform: translateX(-50%);
 }
 .lm-track {
   position: relative;
-  flex: 1;
-  max-width: 60px;
+  width: 100%;
+  height: 32px;
   border-radius: 4px;
   overflow: hidden;
   background: #0e1012;
@@ -275,22 +281,23 @@
 .lm-fill {
   position: absolute;
   left: 0;
-  right: 0;
+  top: 0;
   bottom: 0;
-  background: linear-gradient(to top, #2f8f7f, var(--accent));
-  transition: height 0.05s linear;
+  background: linear-gradient(to right, #2f8f7f, var(--accent));
+  transition: width 0.05s linear;
 }
 .lm-target {
   position: absolute;
-  left: 0;
-  right: 0;
-  height: 0;
-  border-top: 1px dashed var(--yellow);
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-left: 1px dashed var(--yellow);
 }
 .lm-target span {
   position: absolute;
-  right: 3px;
-  top: -14px;
+  left: 4px;
+  top: 50%;
+  transform: translateY(-50%);
   font-family: var(--scale-mono);
   font-size: 10px;
   color: var(--yellow);

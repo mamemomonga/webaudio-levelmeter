@@ -68,6 +68,8 @@ export default function App() {
               peakR={data.peakR}
               holdL={data.holdL}
               holdR={data.holdR}
+              readoutL={data.peakReadoutL}
+              readoutR={data.peakReadoutR}
             />
             <LoudnessMeter momentary={data.momentary} />
           </div>

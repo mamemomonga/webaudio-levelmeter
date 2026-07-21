@@ -342,6 +342,64 @@
   border-color: var(--red);
 }
 
+/* ---------- テストトーン ---------- */
+.test-tone {
+  gap: 12px;
+}
+.tt-group,
+.tt-levels {
+  display: grid;
+  gap: 8px;
+}
+.tt-group {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.tt-levels {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.tt-button,
+.tt-level {
+  min-width: 0;
+  border: 1px solid var(--line-2);
+  background: var(--panel-2);
+  color: var(--text-dim);
+  font-weight: 600;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.tt-button {
+  min-height: 36px;
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+.tt-level {
+  min-height: 34px;
+  padding: 7px 4px;
+  border-radius: 7px;
+  font-family: var(--scale-mono);
+  font-size: 10px;
+}
+.tt-level-value,
+.tt-level-unit {
+  display: block;
+  line-height: 1.1;
+}
+.tt-level-unit {
+  margin-top: 2px;
+  font-size: 9px;
+}
+.tt-button:hover,
+.tt-level:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.tt-button.active,
+.tt-level.active {
+  color: #0b1013;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
 /* ---------- ピークランプ ---------- */
 .pl-body {
   display: flex;

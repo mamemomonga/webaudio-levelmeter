@@ -4,8 +4,26 @@ type PhaseScopeProps = {
   samples: Float32Array
 }
 
+const PHASE_SCOPE_FLOOR_DB = -60
+const PHASE_SCOPE_MAX_VECTOR = Math.SQRT2
+
 function clampUnit(value: number): number {
   return Math.max(-1, Math.min(1, value))
+}
+
+function logScalePoint(x: number, y: number): { x: number; y: number } {
+  const magnitude = Math.hypot(x, y)
+  if (magnitude <= 0) return { x: 0, y: 0 }
+
+  const normalizedMagnitude = Math.min(1, magnitude / PHASE_SCOPE_MAX_VECTOR)
+  const db = 20 * Math.log10(normalizedMagnitude)
+  const scaledMagnitude = clampUnit((db - PHASE_SCOPE_FLOOR_DB) / -PHASE_SCOPE_FLOOR_DB)
+  const scale = scaledMagnitude / magnitude
+
+  return {
+    x: x * scale,
+    y: y * scale,
+  }
 }
 
 export default function PhaseScope({ samples }: PhaseScopeProps) {
@@ -58,8 +76,9 @@ export default function PhaseScope({ samples }: PhaseScopeProps) {
     ctx.beginPath()
 
     for (let i = 0; i < samples.length; i += 2) {
-      const x = cx + clampUnit(samples[i]) * radius
-      const y = cy - clampUnit(samples[i + 1]) * radius
+      const point = logScalePoint(samples[i], samples[i + 1])
+      const x = cx + clampUnit(point.x) * radius
+      const y = cy - clampUnit(point.y) * radius
       if (i === 0) {
         ctx.moveTo(x, y)
       } else {
@@ -72,8 +91,9 @@ export default function PhaseScope({ samples }: PhaseScopeProps) {
 
     ctx.fillStyle = 'rgba(232, 244, 242, 0.72)'
     for (let i = 0; i < samples.length; i += 8) {
-      const x = cx + clampUnit(samples[i]) * radius
-      const y = cy - clampUnit(samples[i + 1]) * radius
+      const point = logScalePoint(samples[i], samples[i + 1])
+      const x = cx + clampUnit(point.x) * radius
+      const y = cy - clampUnit(point.y) * radius
       ctx.beginPath()
       ctx.arc(x, y, Math.max(1, dpr * 1.1), 0, Math.PI * 2)
       ctx.fill()
@@ -83,7 +103,7 @@ export default function PhaseScope({ samples }: PhaseScopeProps) {
   return (
     <div className="panel phase-scope">
       <div className="panel-title">
-        PHASE SCOPE <span className="unit">L/R</span>
+        PHASE SCOPE <span className="unit">L/R / LOG</span>
       </div>
       <canvas
         ref={canvasRef}

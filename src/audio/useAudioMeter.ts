@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import processorUrl from './meter-processor.js?url'
+import processorUrl from './meter-processor.ts?worker&url'
 
 // メータの下限(dB)。この値をメータ底とする。
 export const METER_FLOOR = -60
@@ -27,14 +27,65 @@ const AUDIO_CONSTRAINTS = {
   echoCancellation: false,
   noiseSuppression: false,
   autoGainControl: false,
+} satisfies MediaTrackConstraints
+
+export type MeterStatus = 'idle' | 'running' | 'error'
+export type StereoMode = 'silent' | 'single' | 'mono' | 'inverted' | 'stereo'
+
+export type MeterData = {
+  peakL: number
+  peakR: number
+  holdL: number
+  holdR: number
+  truePeak: number
+  shortTerm: number
+  momentary: number
+  stereoMode: StereoMode
+  peakOver: boolean
 }
 
-function safeDb(v) {
+type ProcessorMessage = {
+  peakL: number
+  peakR: number
+  truePeakL: number
+  truePeakR: number
+  momentary: number
+  shortTerm: number
+  energyL: number
+  energyR: number
+  diffEnergy?: number
+  correlation: number
+}
+
+type HoldState = {
+  l: number
+  r: number
+  tL: number
+  tR: number
+}
+
+type SmoothState = {
+  eL: number
+  eR: number
+  eDiff: number
+  corr: number
+}
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err)
+}
+
+function safeDb(v: number): number {
   return Number.isFinite(v) ? v : METER_FLOOR
 }
 
 // 平滑化済みエネルギー、L-R音量、相関からステレオ状態を判定する。
-function classifyStereo(eL, eR, eDiff, corr) {
+function classifyStereo(
+  eL: number,
+  eR: number,
+  eDiff: number,
+  corr: number
+): StereoMode {
   const levelL = eL > 0 ? 10 * Math.log10(eL) : -Infinity
   const levelR = eR > 0 ? 10 * Math.log10(eR) : -Infinity
   const diffLevel = eDiff > 0 ? 10 * Math.log10(eDiff) : -Infinity
@@ -53,14 +104,14 @@ function classifyStereo(eL, eR, eDiff, corr) {
 }
 
 export function useAudioMeter() {
-  const [status, setStatus] = useState('idle') // idle | running | error
-  const [error, setError] = useState(null)
-  const [devices, setDevices] = useState([])
-  const [currentDeviceId, setCurrentDeviceId] = useState(null)
+  const [status, setStatus] = useState<MeterStatus>('idle')
+  const [error, setError] = useState<string | null>(null)
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([])
+  const [currentDeviceId, setCurrentDeviceId] = useState<string | null>(null)
   const [currentDeviceLabel, setCurrentDeviceLabel] = useState('')
 
   // レンダリング用の計測データ(rAFで更新)
-  const [data, setData] = useState({
+  const [data, setData] = useState<MeterData>({
     peakL: METER_FLOOR,
     peakR: METER_FLOOR,
     holdL: METER_FLOOR,
@@ -72,21 +123,21 @@ export function useAudioMeter() {
     peakOver: false,
   })
 
-  const ctxRef = useRef(null)
-  const nodeRef = useRef(null)
-  const streamRef = useRef(null)
-  const latestRef = useRef(null) // worklet からの最新メッセージ
+  const ctxRef = useRef<AudioContext | null>(null)
+  const nodeRef = useRef<AudioWorkletNode | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+  const latestRef = useRef<ProcessorMessage | null>(null) // worklet からの最新メッセージ
   const rafRef = useRef(0)
   const peakOverUntilRef = useRef(0)
 
   // rAFで維持する状態(ピークホールド・平滑化)
-  const holdRef = useRef({ l: METER_FLOOR, r: METER_FLOOR, tL: 0, tR: 0 })
-  const smoothRef = useRef({ eL: 0, eR: 0, eDiff: 0, corr: 0 })
+  const holdRef = useRef<HoldState>({ l: METER_FLOOR, r: METER_FLOOR, tL: 0, tR: 0 })
+  const smoothRef = useRef<SmoothState>({ eL: 0, eR: 0, eDiff: 0, corr: 0 })
   const lastTimeRef = useRef(0)
 
   const stopStream = useCallback(() => {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((t) => t.stop())
+      streamRef.current.getTracks().forEach((track) => track.stop())
       streamRef.current = null
     }
   }, [])
@@ -103,8 +154,13 @@ export function useAudioMeter() {
 
   // 指定デバイス(未指定は既定)へ接続する。
   const connect = useCallback(
-    async (deviceId) => {
+    async (deviceId: string | null) => {
       const ctx = ctxRef.current
+      const node = nodeRef.current
+      if (!ctx || !node) {
+        throw new Error('audio context is not initialized')
+      }
+
       stopStream()
 
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -124,7 +180,7 @@ export function useAudioMeter() {
       const source = ctx.createMediaStreamSource(stream)
       // 既存ノードを繋ぎ替え
       try {
-        source.connect(nodeRef.current)
+        source.connect(node)
       } catch {
         /* noop */
       }
@@ -139,6 +195,10 @@ export function useAudioMeter() {
     try {
       setError(null)
       const AudioCtx = window.AudioContext || window.webkitAudioContext
+      if (!AudioCtx) {
+        throw new Error('Web Audio API is not supported')
+      }
+
       const ctx = new AudioCtx()
       ctxRef.current = ctx
       await ctx.audioWorklet.addModule(processorUrl)
@@ -166,18 +226,18 @@ export function useAudioMeter() {
       startLoop()
     } catch (err) {
       console.error(err)
-      setError(err && err.message ? err.message : String(err))
+      setError(errorMessage(err))
       setStatus('error')
     }
   }, [connect])
 
   const selectDevice = useCallback(
-    async (deviceId) => {
+    async (deviceId: string) => {
       try {
         await connect(deviceId)
       } catch (err) {
         console.error(err)
-        setError(err && err.message ? err.message : String(err))
+        setError(errorMessage(err))
       }
     },
     [connect]
@@ -185,7 +245,7 @@ export function useAudioMeter() {
 
   // rAFループ: ピークホールド減衰・平滑化・状態更新
   const startLoop = useCallback(() => {
-    const loop = (now) => {
+    const loop = (now: number) => {
       rafRef.current = requestAnimationFrame(loop)
       const t = now / 1000
       const dt = lastTimeRef.current ? t - lastTimeRef.current : 0
@@ -199,10 +259,12 @@ export function useAudioMeter() {
 
       // ピークホールド(L/R)
       const hold = holdRef.current
-      for (const [ch, val] of [
-        ['l', peakL],
-        ['r', peakR],
-      ]) {
+      const channels: Array<{ ch: 'l' | 'r'; val: number }> = [
+        { ch: 'l', val: peakL },
+        { ch: 'r', val: peakR },
+      ]
+
+      for (const { ch, val } of channels) {
         const tKey = ch === 'l' ? 'tL' : 'tR'
         if (val >= hold[ch]) {
           hold[ch] = val

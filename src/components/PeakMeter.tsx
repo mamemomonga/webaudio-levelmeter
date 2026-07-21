@@ -1,5 +1,5 @@
-import { dbToPct, fmtDb } from '../lib/scale.js'
-import { METER_FLOOR } from '../audio/useAudioMeter.js'
+import { METER_FLOOR } from '../audio/useAudioMeter'
+import { dbToPct, fmtDb } from '../lib/scale'
 
 // 目盛(dBFS)
 const TICKS = [0, -3, -6, -12, -18, -24, -36, -48, -60]
@@ -15,7 +15,20 @@ const GRADIENT = `linear-gradient(to top,
   var(--red) ${dbToPct(-1)}%,
   var(--red) 100%)`
 
-function Bar({ label, level, hold }) {
+type BarProps = {
+  label: string
+  level: number
+  hold: number
+}
+
+type PeakMeterProps = {
+  peakL: number
+  peakR: number
+  holdL: number
+  holdR: number
+}
+
+function Bar({ label, level, hold }: BarProps) {
   const levelPct = dbToPct(level)
   const holdPct = dbToPct(hold)
   return (
@@ -38,7 +51,7 @@ function Bar({ label, level, hold }) {
   )
 }
 
-export default function PeakMeter({ peakL, peakR, holdL, holdR }) {
+export default function PeakMeter({ peakL, peakR, holdL, holdR }: PeakMeterProps) {
   return (
     <div className="panel peak-meter">
       <div className="panel-title">

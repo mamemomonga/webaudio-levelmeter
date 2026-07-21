@@ -1,5 +1,5 @@
-import { TARGET_LUFS } from '../audio/useAudioMeter.js'
-import { fmtDb } from '../lib/scale.js'
+import { TARGET_LUFS } from '../audio/useAudioMeter'
+import { fmtDb } from '../lib/scale'
 
 // ラウドネスメータのスケール(LUFS)
 const LU_TOP = 0
@@ -7,14 +7,18 @@ const LU_FLOOR = -36
 
 const TICKS = [0, -6, -15, -20, -28, -36]
 
-function luToPct(lufs) {
+type LoudnessMeterProps = {
+  momentary: number
+}
+
+function luToPct(lufs: number): number {
   if (!Number.isFinite(lufs)) return 0
   const p = ((lufs - LU_FLOOR) / (LU_TOP - LU_FLOOR)) * 100
   return Math.max(0, Math.min(100, p))
 }
 
 // モメンタリー値を表示するラウドネスメータ。ターゲットは -15 LUFS。
-export default function LoudnessMeter({ momentary }) {
+export default function LoudnessMeter({ momentary }: LoudnessMeterProps) {
   const pct = luToPct(momentary)
   const targetPct = luToPct(TARGET_LUFS)
 

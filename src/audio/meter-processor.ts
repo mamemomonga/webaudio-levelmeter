@@ -7,8 +7,39 @@
 // 計測結果は一定間隔でメインスレッドへ postMessage する。
 // 本ファイルは import を持たない自己完結モジュールとして addModule される。
 
+type BiquadCoeffs = {
+  b0: number
+  b1: number
+  b2: number
+  a1: number
+  a2: number
+}
+
+type BiquadState = {
+  x1: number
+  x2: number
+  y1: number
+  y2: number
+}
+
+type KWeightingState = {
+  s1: BiquadState
+  s2: BiquadState
+}
+
+type LoudnessBlock = {
+  sumL: number
+  sumR: number
+  n: number
+}
+
+type OversamplerState = {
+  buf: Float32Array
+  pos: number
+}
+
 // ITU-R BS.1770 K特性フィルタ係数(サンプルレート依存)を算出する。
-function kWeightingCoeffs(fs) {
+function kWeightingCoeffs(fs: number): [BiquadCoeffs, BiquadCoeffs] {
   // ステージ1: ハイシェルフ(頭部・胴体の音響効果を模擬)
   let f0 = 1681.9744509555319
   const G = 3.99984385397
@@ -42,11 +73,38 @@ function kWeightingCoeffs(fs) {
 }
 
 // バイキャッド1段分の状態(Direct Form I)
-function newBiquadState() {
+function newBiquadState(): BiquadState {
   return { x1: 0, x2: 0, y1: 0, y2: 0 }
 }
 
 class MeterProcessor extends AudioWorkletProcessor {
+  private fs: number
+  private c1: BiquadCoeffs
+  private c2: BiquadCoeffs
+  private kState: [KWeightingState, KWeightingState]
+  private blockSamples: number
+  private blockCount: number
+  private blockSumL: number
+  private blockSumR: number
+  private ring: LoudnessBlock[]
+  private maxBlocks: number
+  private momentary: number
+  private shortTerm: number
+  private phases: Float32Array[] = []
+  private tpTaps = 0
+  private tpL!: OversamplerState
+  private tpR!: OversamplerState
+  private postSamples: number
+  private postCount: number
+  private peakLinL = 0
+  private peakLinR = 0
+  private tpLinL = 0
+  private tpLinR = 0
+  private sumL2 = 0
+  private sumR2 = 0
+  private sumLR = 0
+  private sumDiff2 = 0
+
   constructor() {
     super()
     const fs = sampleRate
@@ -84,7 +142,7 @@ class MeterProcessor extends AudioWorkletProcessor {
   }
 
   // 送信ウィンドウ用アキュムレータの初期化
-  resetPostAccum() {
+  resetPostAccum(): void {
     this.peakLinL = 0
     this.peakLinR = 0
     this.tpLinL = 0
@@ -96,7 +154,7 @@ class MeterProcessor extends AudioWorkletProcessor {
   }
 
   // 4倍オーバーサンプリング用ポリフェーズFIRを構築する。
-  buildOversampler() {
+  buildOversampler(): void {
     const OS = 4
     const P = 12 // 位相あたりのタップ数
     const N = OS * P
@@ -129,7 +187,7 @@ class MeterProcessor extends AudioWorkletProcessor {
   }
 
   // 1サンプルをオーバーサンプリングし、補間点を含む最大絶対値を返す。
-  overSamplePeak(state, x) {
+  overSamplePeak(state: OversamplerState, x: number): number {
     const P = this.tpTaps
     const buf = state.buf
     state.pos = (state.pos + 1) % P
@@ -149,7 +207,7 @@ class MeterProcessor extends AudioWorkletProcessor {
   }
 
   // K特性フィルタ(2段バイキャッド)を1サンプル適用する。
-  kweight(ch, x) {
+  kweight(ch: 0 | 1, x: number): number {
     const st = this.kState[ch]
     let s = st.s1
     let c = this.c1
@@ -171,7 +229,7 @@ class MeterProcessor extends AudioWorkletProcessor {
   }
 
   // 100msブロックを確定してリングに積み、ラウドネスを更新する。
-  pushBlock() {
+  pushBlock(): void {
     this.ring.push({ sumL: this.blockSumL, sumR: this.blockSumR, n: this.blockCount })
     if (this.ring.length > this.maxBlocks) this.ring.shift()
     this.momentary = this.loudnessOver(4) // 400ms
@@ -182,7 +240,7 @@ class MeterProcessor extends AudioWorkletProcessor {
   }
 
   // 合計エネルギーからラウドネス(LUFS)を算出する。
-  loudnessFromSums(sL, sR, n) {
+  loudnessFromSums(sL: number, sR: number, n: number): number {
     if (n === 0) return -Infinity
     const sum = sL / n + sR / n // 前方2ch は重み G=1.0
     if (sum <= 0) return -Infinity
@@ -190,7 +248,7 @@ class MeterProcessor extends AudioWorkletProcessor {
   }
 
   // 直近 count ブロックからラウドネス(LUFS)を算出する。
-  loudnessOver(count) {
+  loudnessOver(count: number): number {
     const start = Math.max(0, this.ring.length - count)
     let sL = 0
     let sR = 0
@@ -203,8 +261,8 @@ class MeterProcessor extends AudioWorkletProcessor {
     return this.loudnessFromSums(sL, sR, nn)
   }
 
-  postUpdate() {
-    const toDb = (v) => (v > 0 ? 20 * Math.log10(v) : -Infinity)
+  postUpdate(): void {
+    const toDb = (v: number) => (v > 0 ? 20 * Math.log10(v) : -Infinity)
     let correlation = 0
     const denom = Math.sqrt(this.sumL2 * this.sumR2)
     if (denom > 1e-12) correlation = this.sumLR / denom
@@ -226,7 +284,7 @@ class MeterProcessor extends AudioWorkletProcessor {
     this.postCount = 0
   }
 
-  process(inputs) {
+  process(inputs: Float32Array[][]): boolean {
     const input = inputs[0]
     if (!input || input.length === 0) return true
 

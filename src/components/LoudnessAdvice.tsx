@@ -2,8 +2,14 @@
 const LOW_MAX_LUFS = -16
 const HIGH_MIN_LUFS = -14
 
-export default function LoudnessAdvice({ shortTerm }) {
-  let level // 'low' | 'ok' | 'high' | 'none'
+type AdviceLevel = 'low' | 'ok' | 'high' | 'none'
+
+type LoudnessAdviceProps = {
+  shortTerm: number
+}
+
+export default function LoudnessAdvice({ shortTerm }: LoudnessAdviceProps) {
+  let level: AdviceLevel
   if (!Number.isFinite(shortTerm)) {
     level = 'none'
   } else if (shortTerm <= LOW_MAX_LUFS) {

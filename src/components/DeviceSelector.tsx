@@ -1,4 +1,12 @@
+import type { MouseEvent } from 'react'
 import { useState } from 'react'
+
+type DeviceSelectorProps = {
+  devices: MediaDeviceInfo[]
+  currentDeviceId: string | null
+  currentLabel: string
+  onSelect: (deviceId: string) => void
+}
 
 // 選択中のオーディオデバイスを表示し、押すと選択ダイアログを開く。
 export default function DeviceSelector({
@@ -6,10 +14,10 @@ export default function DeviceSelector({
   currentDeviceId,
   currentLabel,
   onSelect,
-}) {
+}: DeviceSelectorProps) {
   const [open, setOpen] = useState(false)
 
-  const choose = (id) => {
+  const choose = (id: string) => {
     setOpen(false)
     onSelect(id)
   }
@@ -32,7 +40,7 @@ export default function DeviceSelector({
             className="dialog"
             role="dialog"
             aria-label="オーディオデバイスの選択"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}
           >
             <div className="dialog-title">入力デバイスを選択</div>
             <ul className="device-list">

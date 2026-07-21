@@ -1,8 +1,13 @@
-import { TRUE_PEAK_LIMIT } from '../audio/useAudioMeter.js'
-import { fmtDb } from '../lib/scale.js'
+import { TRUE_PEAK_LIMIT } from '../audio/useAudioMeter'
+import { fmtDb } from '../lib/scale'
+
+type PeakLampProps = {
+  over: boolean
+  truePeak: number
+}
 
 // -1.0dBTP を超えたら点灯し、3秒保持するピークランプ。
-export default function PeakLamp({ over, truePeak }) {
+export default function PeakLamp({ over, truePeak }: PeakLampProps) {
   return (
     <div className="panel peak-lamp">
       <div className="panel-title">

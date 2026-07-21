@@ -1,5 +1,13 @@
+import type { StereoMode } from '../audio/useAudioMeter'
+
 // ステレオ状態の表示。
-const MODES = {
+type StereoTone = 'ok' | 'info' | 'warn' | 'error' | 'idle'
+
+type StereoStatusProps = {
+  mode: StereoMode
+}
+
+const MODES: Record<StereoMode, { label: string; desc: string; tone: StereoTone }> = {
   stereo: { label: 'ステレオ', desc: '左右に異なる信号', tone: 'ok' },
   mono: { label: 'モノラル', desc: '左右が同じ信号', tone: 'info' },
   single: { label: '片チャンネル', desc: '片側のみ信号あり', tone: 'warn' },
@@ -7,8 +15,8 @@ const MODES = {
   silent: { label: '無信号', desc: '入力がありません', tone: 'idle' },
 }
 
-export default function StereoStatus({ mode }) {
-  const m = MODES[mode] || MODES.silent
+export default function StereoStatus({ mode }: StereoStatusProps) {
+  const m = MODES[mode]
   return (
     <div className="panel stereo-status">
       <div className="panel-title">STEREO</div>

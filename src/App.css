@@ -125,22 +125,25 @@
 .meters {
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(300px, 1.6fr) minmax(240px, 1fr);
+  --meter-gap: 16px;
+  --scope-size: clamp(260px, 26vw, 380px);
+  --meter-row-height: calc((var(--scope-size) - var(--meter-gap)) / 2);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) var(--scope-size);
+  grid-template-rows:
+    var(--meter-row-height)
+    var(--meter-row-height)
+    minmax(116px, auto)
+    minmax(220px, auto)
+    auto;
   gap: 16px;
   padding: 16px 20px;
   align-items: stretch;
 }
 .meters-top {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
-  min-height: 0;
-  align-content: start;
+  display: contents;
 }
 .meters-side {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  display: contents;
 }
 
 /* ---------- パネル共通 ---------- */
@@ -168,7 +171,9 @@
 
 /* ---------- ピークメータ ---------- */
 .peak-meter {
-  min-height: 180px;
+  grid-column: 1 / 3;
+  grid-row: 1;
+  min-height: 0;
 }
 .pm-body {
   flex: 1;
@@ -267,7 +272,9 @@
 }
 /* ---------- ラウドネスメータ ---------- */
 .loudness-meter {
-  min-height: 150px;
+  grid-column: 1 / 3;
+  grid-row: 2;
+  min-height: 0;
 }
 .lm-body {
   flex: 1;
@@ -343,6 +350,10 @@
 }
 
 /* ---------- 適正表示 ---------- */
+.advice {
+  grid-column: 1 / 3;
+  grid-row: 3;
+}
 .advice-row {
   display: flex;
   gap: 8px;
@@ -378,7 +389,59 @@
 
 /* ---------- テストトーン ---------- */
 .test-tone {
+  grid-column: 1 / 4;
+  grid-row: 4;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 12px;
+}
+.test-tone .panel-title {
+  grid-column: 1;
+  grid-row: 1;
+}
+.tt-switch {
+  grid-column: 1;
+  grid-row: 2;
+  align-self: start;
+  justify-self: start;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  background: var(--panel-2);
+  color: var(--text-dim);
+  font-family: var(--scale-mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+.tt-switch-track {
+  position: relative;
+  width: 42px;
+  height: 22px;
+  border-radius: 999px;
+  background: #111417;
+  border: 1px solid var(--line);
+}
+.tt-switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--text-faint);
+  transition: transform 0.15s, background 0.15s;
+}
+.tt-switch.on {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.tt-switch.on .tt-switch-knob {
+  transform: translateX(20px);
+  background: var(--accent);
 }
 .tt-group,
 .tt-levels {
@@ -386,9 +449,14 @@
   gap: 8px;
 }
 .tt-group {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-column: 1;
+  grid-row: 3;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 .tt-levels {
+  grid-column: 1;
+  grid-row: 4;
+  align-self: stretch;
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 .tt-button,
@@ -435,6 +503,10 @@
 }
 
 /* ---------- ステレオ状態 ---------- */
+.stereo-status {
+  grid-column: 3;
+  grid-row: 3;
+}
 .ss-body {
   padding: 6px 0 2px;
 }
@@ -466,13 +538,54 @@
 
 /* ---------- フェーズスコープ ---------- */
 .phase-scope {
+  position: relative;
+  grid-column: 3;
+  grid-row: 1 / 3;
+  width: 100%;
+  height: 100%;
   gap: 0;
+}
+.phase-scope .panel-title {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  z-index: 1;
+}
+.ps-label {
+  position: absolute;
+  z-index: 1;
+  font-family: var(--scale-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-faint);
+  pointer-events: none;
+}
+.ps-label-top {
+  top: 42px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.ps-label-bottom {
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.ps-label-left {
+  left: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.ps-label-right {
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 .ps-canvas {
   display: block;
   width: 100%;
-  aspect-ratio: 1 / 1;
-  min-height: 180px;
+  height: 100%;
+  min-height: 0;
   border: 1px solid var(--line-2);
   border-radius: 8px;
   background: #0e1012;
@@ -480,6 +593,8 @@
 
 /* ---------- 使い方ガイド ---------- */
 .usage-guide {
+  grid-column: 1 / 4;
+  grid-row: 5;
   gap: 14px;
 }
 .guide-item {
@@ -594,9 +709,36 @@
 @media (max-width: 860px) {
   .meters {
     grid-template-columns: 1fr;
+    grid-template-rows: auto;
   }
-  .meters-top {
-    grid-template-columns: 2fr 1fr;
+  .peak-meter,
+  .loudness-meter,
+  .advice,
+  .stereo-status,
+  .phase-scope,
+  .test-tone,
+  .usage-guide {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  .test-tone {
+    grid-template-columns: 1fr;
+  }
+  .test-tone .panel-title,
+  .tt-switch,
+  .tt-group,
+  .tt-levels {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  .tt-group {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .phase-scope {
+    width: min(100%, 360px);
+    height: auto;
+    aspect-ratio: 1 / 1;
+    justify-self: center;
   }
 }
 @media (max-width: 520px) {

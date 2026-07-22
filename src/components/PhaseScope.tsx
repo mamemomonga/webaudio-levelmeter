@@ -105,6 +105,10 @@ export default function PhaseScope({ samples }: PhaseScopeProps) {
       <div className="panel-title">
         PHASE SCOPE <span className="unit">L/R / LOG</span>
       </div>
+      <div className="ps-label ps-label-top">+</div>
+      <div className="ps-label ps-label-bottom">-</div>
+      <div className="ps-label ps-label-left">L</div>
+      <div className="ps-label ps-label-right">R</div>
       <canvas
         ref={canvasRef}
         className="ps-canvas"

@@ -6,10 +6,14 @@ import {
 } from '../audio/useTestTone'
 
 export default function TestToneGenerator() {
-  const { waveform, level, setWaveform, setLevel } = useTestTone()
+  const { enabled, waveform, level, setEnabled, setWaveform, setLevel } = useTestTone()
 
   const handleWaveform = (nextWaveform: TestToneWaveform) => {
     void setWaveform(nextWaveform)
+  }
+
+  const handleEnabled = () => {
+    void setEnabled(!enabled)
   }
 
   return (
@@ -17,6 +21,19 @@ export default function TestToneGenerator() {
       <div className="panel-title">
         TEST TONE <span className="unit">1kHz / dBFS</span>
       </div>
+
+      <button
+        className={`tt-switch ${enabled ? 'on' : ''}`}
+        type="button"
+        role="switch"
+        aria-checked={enabled}
+        onClick={handleEnabled}
+      >
+        <span className="tt-switch-track" aria-hidden="true">
+          <span className="tt-switch-knob" />
+        </span>
+        <span className="tt-switch-label">{enabled ? 'ON' : 'OFF'}</span>
+      </button>
 
       <div className="tt-group" aria-label="出力波形">
         {TEST_TONE_WAVEFORMS.map((item) => (

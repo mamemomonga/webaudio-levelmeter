@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 export type TestToneWaveform =
-  | 'off'
   | 'sine'
   | 'triangle'
   | 'square'
@@ -12,10 +11,9 @@ export type TestToneWaveform =
 export type TestToneLevel = -20 | -18 | -12 | -6 | 0
 
 type NoiseWaveform = Extract<TestToneWaveform, `${string}-noise`>
-type OscillatorWaveform = Exclude<TestToneWaveform, 'off' | NoiseWaveform>
+type OscillatorWaveform = Exclude<TestToneWaveform, NoiseWaveform>
 
 export const TEST_TONE_WAVEFORMS: Array<{ value: TestToneWaveform; label: string }> = [
-  { value: 'off', label: 'オフ' },
   { value: 'sine', label: 'サイン波' },
   { value: 'triangle', label: '三角波' },
   { value: 'square', label: '矩形波' },
@@ -116,12 +114,14 @@ function isOscillatorWaveform(waveform: TestToneWaveform): waveform is Oscillato
 }
 
 export function useTestTone() {
-  const [waveform, setWaveformState] = useState<TestToneWaveform>('off')
+  const [enabled, setEnabledState] = useState(false)
+  const [waveform, setWaveformState] = useState<TestToneWaveform>('sine')
   const [level, setLevelState] = useState<TestToneLevel>(-20)
   const ctxRef = useRef<AudioContext | null>(null)
   const gainRef = useRef<GainNode | null>(null)
   const sourceRef = useRef<ToneSource | null>(null)
-  const waveformRef = useRef<TestToneWaveform>('off')
+  const enabledRef = useRef(false)
+  const waveformRef = useRef<TestToneWaveform>('sine')
   const levelRef = useRef<TestToneLevel>(-20)
 
   const ensureContext = useCallback(() => {
@@ -165,7 +165,7 @@ export function useTestTone() {
   }, [])
 
   const startWaveform = useCallback(
-    async (nextWaveform: Exclude<TestToneWaveform, 'off'>, nextLevel: TestToneLevel) => {
+    async (nextWaveform: TestToneWaveform, nextLevel: TestToneLevel) => {
       const ctx = ensureContext()
       const gain = gainRef.current
       if (!gain) {
@@ -201,18 +201,28 @@ export function useTestTone() {
       waveformRef.current = nextWaveform
       setWaveformState(nextWaveform)
 
-      if (nextWaveform === 'off') {
-        const ctx = ctxRef.current
-        const gain = gainRef.current
-        if (ctx && gain) {
-          gain.gain.cancelScheduledValues(ctx.currentTime)
-          gain.gain.setTargetAtTime(0, ctx.currentTime, GAIN_RAMP_SECONDS)
-        }
-        stopSource()
+      if (enabledRef.current) await startWaveform(nextWaveform, levelRef.current)
+    },
+    [startWaveform]
+  )
+
+  const setEnabled = useCallback(
+    async (nextEnabled: boolean) => {
+      enabledRef.current = nextEnabled
+      setEnabledState(nextEnabled)
+
+      if (nextEnabled) {
+        await startWaveform(waveformRef.current, levelRef.current)
         return
       }
 
-      await startWaveform(nextWaveform, levelRef.current)
+      const ctx = ctxRef.current
+      const gain = gainRef.current
+      if (ctx && gain) {
+        gain.gain.cancelScheduledValues(ctx.currentTime)
+        gain.gain.setTargetAtTime(0, ctx.currentTime, GAIN_RAMP_SECONDS)
+      }
+      stopSource()
     },
     [startWaveform, stopSource]
   )
@@ -221,7 +231,7 @@ export function useTestTone() {
     (nextLevel: TestToneLevel) => {
       levelRef.current = nextLevel
       setLevelState(nextLevel)
-      if (waveformRef.current !== 'off') applyLevel(nextLevel)
+      if (enabledRef.current) applyLevel(nextLevel)
     },
     [applyLevel]
   )
@@ -235,8 +245,10 @@ export function useTestTone() {
   }, [stopSource])
 
   return {
+    enabled,
     waveform,
     level,
+    setEnabled,
     setWaveform,
     setLevel,
   }

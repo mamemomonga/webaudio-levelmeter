@@ -360,8 +360,11 @@
 }
 .advice-item {
   flex: 1;
+  display: grid;
+  gap: 5px;
+  align-content: center;
   text-align: center;
-  padding: 14px 6px;
+  padding: 12px 6px;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 600;
@@ -369,6 +372,16 @@
   background: var(--panel-2);
   border: 1px solid var(--line-2);
   transition: all 0.15s;
+}
+.advice-label,
+.advice-threshold {
+  display: block;
+}
+.advice-threshold {
+  font-family: var(--scale-mono);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-faint);
 }
 .advice-item.active.low {
   color: #0b1013;
@@ -385,6 +398,9 @@
   color: #0b1013;
   background: var(--red);
   border-color: var(--red);
+}
+.advice-item.active .advice-threshold {
+  color: rgba(11, 16, 19, 0.7);
 }
 
 /* ---------- テストトーン ---------- */

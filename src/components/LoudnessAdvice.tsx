@@ -21,9 +21,13 @@ export default function LoudnessAdvice({ shortTerm }: LoudnessAdviceProps) {
   }
 
   const items = [
-    { key: 'low', label: '小さい' },
-    { key: 'ok', label: 'ちょうどいい' },
-    { key: 'high', label: '大きい' },
+    { key: 'low', label: '小さい', threshold: `${LOW_MAX_LUFS} LUFS 以下` },
+    {
+      key: 'ok',
+      label: 'ちょうどいい',
+      threshold: `${LOW_MAX_LUFS} 〜 ${HIGH_MIN_LUFS} LUFS`,
+    },
+    { key: 'high', label: '大きい', threshold: `${HIGH_MIN_LUFS} LUFS 以上` },
   ]
 
   return (
@@ -39,7 +43,8 @@ export default function LoudnessAdvice({ shortTerm }: LoudnessAdviceProps) {
               level === it.key ? 'active' : ''
             }`}
           >
-            {it.label}
+            <span className="advice-label">{it.label}</span>
+            <span className="advice-threshold">{it.threshold}</span>
           </div>
         ))}
       </div>

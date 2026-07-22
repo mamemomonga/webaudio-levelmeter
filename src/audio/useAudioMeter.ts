@@ -38,11 +38,11 @@ export type MeterData = {
   peakR: number
   holdL: number
   holdR: number
-  truePeak: number
   shortTerm: number
   momentary: number
   stereoMode: StereoMode
-  peakOver: boolean
+  peakOverL: boolean
+  peakOverR: boolean
   peakReadoutL: number
   peakReadoutR: number
   phaseScope: Float32Array
@@ -129,11 +129,11 @@ export function useAudioMeter() {
     peakR: METER_FLOOR,
     holdL: METER_FLOOR,
     holdR: METER_FLOOR,
-    truePeak: METER_FLOOR,
     shortTerm: -Infinity,
     momentary: -Infinity,
     stereoMode: 'silent',
-    peakOver: false,
+    peakOverL: false,
+    peakOverR: false,
     peakReadoutL: METER_FLOOR,
     peakReadoutR: METER_FLOOR,
     phaseScope: new Float32Array(0),
@@ -144,7 +144,7 @@ export function useAudioMeter() {
   const streamRef = useRef<MediaStream | null>(null)
   const latestRef = useRef<ProcessorMessage | null>(null) // worklet からの最新メッセージ
   const rafRef = useRef(0)
-  const peakOverUntilRef = useRef(0)
+  const peakOverUntilRef = useRef({ l: 0, r: 0 })
 
   // rAFで維持する状態(ピークホールド・平滑化)
   const holdRef = useRef<HoldState>({ l: METER_FLOOR, r: METER_FLOOR, tL: 0, tR: 0 })
@@ -312,10 +312,14 @@ export function useAudioMeter() {
         }
       }
 
-      // トゥルーピーク(L/R最大)と -1.0dBTP 超過後のランプ保持
-      const truePeak = Math.max(safeDb(m.truePeakL), safeDb(m.truePeakR))
-      if (truePeak > TRUE_PEAK_LIMIT) peakOverUntilRef.current = t + PEAK_LAMP_HOLD_TIME
-      const peakOver = t < peakOverUntilRef.current
+      // トゥルーピークと -1.0dBTP 超過後のランプ保持
+      const truePeakL = safeDb(m.truePeakL)
+      const truePeakR = safeDb(m.truePeakR)
+      const peakOverUntil = peakOverUntilRef.current
+      if (truePeakL > TRUE_PEAK_LIMIT) peakOverUntil.l = t + PEAK_LAMP_HOLD_TIME
+      if (truePeakR > TRUE_PEAK_LIMIT) peakOverUntil.r = t + PEAK_LAMP_HOLD_TIME
+      const peakOverL = t < peakOverUntil.l
+      const peakOverR = t < peakOverUntil.r
 
       // エネルギー・相関の平滑化
       const sm = smoothRef.current
@@ -331,11 +335,11 @@ export function useAudioMeter() {
         peakR,
         holdL: hold.l,
         holdR: hold.r,
-        truePeak,
         shortTerm: m.shortTerm,
         momentary: m.momentary,
         stereoMode,
-        peakOver,
+        peakOverL,
+        peakOverR,
         peakReadoutL: readout.displayL,
         peakReadoutR: readout.displayR,
         phaseScope: m.phaseScope ?? new Float32Array(0),

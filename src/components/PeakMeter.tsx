@@ -19,6 +19,8 @@ type BarProps = {
   label: string
   level: number
   hold: number
+  over: boolean
+  readout: number
 }
 
 type PeakMeterProps = {
@@ -26,11 +28,13 @@ type PeakMeterProps = {
   peakR: number
   holdL: number
   holdR: number
+  overL: boolean
+  overR: boolean
   readoutL: number
   readoutR: number
 }
 
-function Bar({ label, level, hold }: BarProps) {
+function Bar({ label, level, hold, over, readout }: BarProps) {
   const levelPct = dbToPct(level)
   const holdPct = dbToPct(hold)
   return (
@@ -49,6 +53,10 @@ function Bar({ label, level, hold }: BarProps) {
           <div className="pm-hold" style={{ left: `${holdPct}%` }} />
         )}
       </div>
+      <div className={`pm-overlamp ${over ? 'on' : ''}`} aria-hidden="true" />
+      <div className="pm-row-readout">
+        {fmtDb(readout)} <span className="unit">dB</span>
+      </div>
     </div>
   )
 }
@@ -58,6 +66,8 @@ export default function PeakMeter({
   peakR,
   holdL,
   holdR,
+  overL,
+  overR,
   readoutL,
   readoutR,
 }: PeakMeterProps) {
@@ -67,8 +77,8 @@ export default function PeakMeter({
         PEAK <span className="unit">dBFS / 1s MAX</span>
       </div>
       <div className="pm-body">
-        <Bar label="L" level={peakL} hold={holdL} />
-        <Bar label="R" level={peakR} hold={holdR} />
+        <Bar label="L" level={peakL} hold={holdL} over={overL} readout={readoutL} />
+        <Bar label="R" level={peakR} hold={holdR} over={overR} readout={readoutR} />
         <div className="pm-scale">
           {TICKS.map((t) => (
             <div key={t} className="pm-tick" style={{ left: `${dbToPct(t)}%` }}>
@@ -76,10 +86,6 @@ export default function PeakMeter({
             </div>
           ))}
         </div>
-      </div>
-      <div className="pm-readout">
-        <span>L {fmtDb(readoutL)}</span>
-        <span>R {fmtDb(readoutR)}</span>
       </div>
     </div>
   )

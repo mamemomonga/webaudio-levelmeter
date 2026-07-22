@@ -28,22 +28,24 @@ export default function LoudnessMeter({ momentary }: LoudnessMeterProps) {
         LOUDNESS <span className="unit">LUFS / Momentary</span>
       </div>
       <div className="lm-body">
-        <div className="lm-track">
-          <div className="lm-fill" style={{ width: `${pct}%` }} />
-          <div className="lm-target" style={{ left: `${targetPct}%` }}>
-            <span>-15</span>
+        <div className="lm-main">
+          <div className="lm-track">
+            <div className="lm-fill" style={{ width: `${pct}%` }} />
+            <div className="lm-target" style={{ left: `${targetPct}%` }}>
+              <span>-15</span>
+            </div>
+          </div>
+          <div className="lm-scale">
+            {TICKS.map((t) => (
+              <div key={t} className="lm-tick" style={{ left: `${luToPct(t)}%` }}>
+                <span>{t}</span>
+              </div>
+            ))}
           </div>
         </div>
-        <div className="lm-scale">
-          {TICKS.map((t) => (
-            <div key={t} className="lm-tick" style={{ left: `${luToPct(t)}%` }}>
-              <span>{t}</span>
-            </div>
-          ))}
+        <div className="lm-readout">
+          {fmtDb(momentary)} <span className="unit">LUFS</span>
         </div>
-      </div>
-      <div className="lm-readout">
-        {fmtDb(momentary)} <span className="unit">LUFS</span>
       </div>
     </div>
   )

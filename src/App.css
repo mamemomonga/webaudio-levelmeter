@@ -411,7 +411,7 @@
 }
 .oc-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(240px, 0.8fr);
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
   gap: 10px;
   align-items: stretch;
 }
@@ -425,6 +425,10 @@
   border: 1px solid var(--line-2);
   border-radius: 8px;
   background: var(--panel-2);
+}
+.oc-card-compressor {
+  grid-template-columns: 1fr;
+  align-content: center;
 }
 .oc-copy {
   min-width: 0;
@@ -443,16 +447,21 @@
 .oc-switch {
   justify-self: end;
 }
-.oc-level {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) 76px;
+.oc-compressor-controls {
+  display: flex;
   gap: 10px;
   align-items: center;
-  min-height: 64px;
-  padding: 10px 12px;
-  border: 1px solid var(--line-2);
-  border-radius: 8px;
-  background: var(--panel-2);
+  justify-self: start;
+  width: min(100%, 520px);
+  min-width: 0;
+}
+.oc-level {
+  display: grid;
+  grid-template-columns: auto minmax(180px, 1fr) 76px;
+  gap: 10px;
+  align-items: center;
+  flex: 1 1 260px;
+  min-width: 0;
 }
 .oc-level.disabled {
   opacity: 0.58;
@@ -465,6 +474,7 @@
 }
 .oc-level input {
   width: 100%;
+  min-width: 180px;
   accent-color: var(--accent);
 }
 .oc-level-value {
@@ -480,16 +490,16 @@
   grid-column: 1 / 4;
   grid-row: 5;
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 12px;
 }
 .test-tone .panel-title {
-  grid-column: 1;
+  grid-column: 1 / 3;
   grid-row: 1;
 }
 .tt-switch {
   grid-column: 1;
-  grid-row: 2;
+  grid-row: 2 / 4;
   align-self: start;
   justify-self: start;
   display: flex;
@@ -537,13 +547,13 @@
   gap: 8px;
 }
 .tt-group {
-  grid-column: 1;
-  grid-row: 3;
+  grid-column: 2;
+  grid-row: 2;
   grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 .tt-levels {
-  grid-column: 1;
-  grid-row: 4;
+  grid-column: 2;
+  grid-row: 3;
   align-self: stretch;
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
@@ -816,8 +826,17 @@
   .oc-grid {
     grid-template-columns: 1fr;
   }
+  .oc-card-compressor {
+    grid-template-columns: 1fr;
+  }
+  .oc-compressor-controls {
+    width: 100%;
+  }
   .oc-level {
     grid-template-columns: auto minmax(0, 1fr) 76px;
+  }
+  .oc-level input {
+    min-width: 0;
   }
   .test-tone .panel-title,
   .tt-switch,

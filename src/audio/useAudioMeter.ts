@@ -3,6 +3,8 @@ import processorUrl from './meter-processor.ts?worker&url'
 
 // メータの下限(dB)。この値をメータ底とする。
 export const METER_FLOOR = -60
+// ピーク数値表示はこの値以上を表示し、未満は -∞ とする。バー表示は METER_FLOOR のまま。
+const PEAK_READOUT_FLOOR = -120
 // トゥルーピークの上限しきい値(dBTP)
 export const TRUE_PEAK_LIMIT = -1.0
 // ラウドネスのターゲット(LUFS)
@@ -95,6 +97,11 @@ function safeDb(v: number): number {
   return Number.isFinite(v) ? v : METER_FLOOR
 }
 
+function safePeakReadoutDb(v: number): number {
+  if (!Number.isFinite(v) || v < PEAK_READOUT_FLOOR) return -Infinity
+  return v
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
 }
@@ -144,8 +151,8 @@ export function useAudioMeter() {
     stereoMode: 'silent',
     peakOverL: false,
     peakOverR: false,
-    peakReadoutL: METER_FLOOR,
-    peakReadoutR: METER_FLOOR,
+    peakReadoutL: -Infinity,
+    peakReadoutR: -Infinity,
     phaseScope: new Float32Array(0),
   })
 
@@ -165,11 +172,11 @@ export function useAudioMeter() {
   const holdRef = useRef<HoldState>({ l: METER_FLOOR, r: METER_FLOOR, tL: 0, tR: 0 })
   const smoothRef = useRef<SmoothState>({ eL: 0, eR: 0, eDiff: 0, corr: 0 })
   const peakReadoutRef = useRef<PeakReadoutState>({
-    l: METER_FLOOR,
-    r: METER_FLOOR,
+    l: -Infinity,
+    r: -Infinity,
     nextAt: 0,
-    displayL: METER_FLOOR,
-    displayR: METER_FLOOR,
+    displayL: -Infinity,
+    displayR: -Infinity,
   })
   const lastTimeRef = useRef(0)
 
@@ -355,16 +362,18 @@ export function useAudioMeter() {
 
       const peakL = safeDb(m.peakL)
       const peakR = safeDb(m.peakR)
+      const peakReadoutL = safePeakReadoutDb(m.peakL)
+      const peakReadoutR = safePeakReadoutDb(m.peakR)
 
       const readout = peakReadoutRef.current
       if (!readout.nextAt) readout.nextAt = t + PEAK_READOUT_INTERVAL
-      readout.l = Math.max(readout.l, peakL)
-      readout.r = Math.max(readout.r, peakR)
+      readout.l = Math.max(readout.l, peakReadoutL)
+      readout.r = Math.max(readout.r, peakReadoutR)
       if (t >= readout.nextAt) {
         readout.displayL = readout.l
         readout.displayR = readout.r
-        readout.l = METER_FLOOR
-        readout.r = METER_FLOOR
+        readout.l = -Infinity
+        readout.r = -Infinity
         readout.nextAt = t + PEAK_READOUT_INTERVAL
       }
 

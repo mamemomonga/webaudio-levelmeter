@@ -6,7 +6,7 @@ type PhaseScopeProps = {
 
 const PHASE_SCOPE_FLOOR_DB = -60
 const PHASE_SCOPE_MAX_VECTOR = Math.SQRT2
-const PHASE_SCOPE_DRAW_INTERVAL_MS = 100
+const PHASE_SCOPE_DRAW_INTERVAL_MS = 1000 / 60
 const PHASE_SCOPE_FADE_ALPHA = 0.14
 
 function clampUnit(value: number): number {

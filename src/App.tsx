@@ -3,6 +3,7 @@ import DeviceSelector from './components/DeviceSelector'
 import PeakMeter from './components/PeakMeter'
 import LoudnessMeter from './components/LoudnessMeter'
 import LoudnessAdvice from './components/LoudnessAdvice'
+import OutputControls from './components/OutputControls'
 import PhaseScope from './components/PhaseScope'
 import StereoStatus from './components/StereoStatus'
 import TestToneGenerator from './components/TestToneGenerator'
@@ -16,9 +17,15 @@ export default function App() {
     devices,
     currentDeviceId,
     currentDeviceLabel,
+    outputEnabled,
+    compressorEnabled,
+    compressorLevelDb,
     data,
     start,
     selectDevice,
+    setOutputEnabled,
+    setCompressorEnabled,
+    setCompressorLevelDb,
   } = useAudioMeter()
 
   return (
@@ -77,6 +84,14 @@ export default function App() {
           </div>
           <div className="meters-side">
             <LoudnessAdvice shortTerm={data.shortTerm} />
+            <OutputControls
+              outputEnabled={outputEnabled}
+              compressorEnabled={compressorEnabled}
+              compressorLevelDb={compressorLevelDb}
+              onOutputEnabledChange={setOutputEnabled}
+              onCompressorEnabledChange={setCompressorEnabled}
+              onCompressorLevelChange={setCompressorLevelDb}
+            />
             <TestToneGenerator />
             <StereoStatus mode={data.stereoMode} />
             <PhaseScope samples={data.phaseScope} />

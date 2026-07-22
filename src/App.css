@@ -133,6 +133,7 @@
     var(--meter-row-height)
     var(--meter-row-height)
     minmax(116px, auto)
+    auto
     minmax(220px, auto)
     auto;
   gap: 16px;
@@ -403,10 +404,81 @@
   color: rgba(11, 16, 19, 0.7);
 }
 
+/* ---------- 出力・コンプレッサー ---------- */
+.output-controls {
+  grid-column: 1 / 4;
+  grid-row: 4;
+}
+.oc-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(240px, 0.8fr);
+  gap: 10px;
+  align-items: stretch;
+}
+.oc-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  min-height: 64px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  background: var(--panel-2);
+}
+.oc-copy {
+  min-width: 0;
+}
+.oc-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.oc-desc {
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-dim);
+}
+.oc-switch {
+  justify-self: end;
+}
+.oc-level {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 76px;
+  gap: 10px;
+  align-items: center;
+  min-height: 64px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  background: var(--panel-2);
+}
+.oc-level.disabled {
+  opacity: 0.58;
+}
+.oc-level-label {
+  font-family: var(--scale-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+.oc-level input {
+  width: 100%;
+  accent-color: var(--accent);
+}
+.oc-level-value {
+  font-family: var(--scale-mono);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: right;
+  color: var(--text);
+}
+
 /* ---------- テストトーン ---------- */
 .test-tone {
   grid-column: 1 / 4;
-  grid-row: 4;
+  grid-row: 5;
   display: grid;
   grid-template-columns: 1fr;
   gap: 12px;
@@ -610,7 +682,7 @@
 /* ---------- 使い方ガイド ---------- */
 .usage-guide {
   grid-column: 1 / 4;
-  grid-row: 5;
+  grid-row: 6;
   gap: 14px;
 }
 .guide-item {
@@ -730,6 +802,7 @@
   .peak-meter,
   .loudness-meter,
   .advice,
+  .output-controls,
   .stereo-status,
   .phase-scope,
   .test-tone,
@@ -739,6 +812,12 @@
   }
   .test-tone {
     grid-template-columns: 1fr;
+  }
+  .oc-grid {
+    grid-template-columns: 1fr;
+  }
+  .oc-level {
+    grid-template-columns: auto minmax(0, 1fr) 76px;
   }
   .test-tone .panel-title,
   .tt-switch,

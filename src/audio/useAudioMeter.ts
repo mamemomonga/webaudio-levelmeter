@@ -14,6 +14,9 @@ const RELEASE_RATE = 14 // dB/秒
 const PEAK_LAMP_HOLD_TIME = 0.5 // 秒
 const PEAK_READOUT_INTERVAL = 1.0 // 秒
 
+const COMPRESSOR_LEVEL_MIN = 0
+const COMPRESSOR_LEVEL_MAX = 30
+
 // ステレオ判定・エネルギー平滑化の時定数(秒)
 const SMOOTH_TAU = 0.25
 // 有信号とみなす下限(dBFS相当)
@@ -92,6 +95,22 @@ function safeDb(v: number): number {
   return Number.isFinite(v) ? v : METER_FLOOR
 }
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value))
+}
+
+function dbToLinear(db: number): number {
+  return 10 ** (db / 20)
+}
+
+function configureCompressor(compressor: DynamicsCompressorNode, enabled: boolean) {
+  compressor.threshold.value = enabled ? -24 : 0
+  compressor.knee.value = enabled ? 30 : 0
+  compressor.ratio.value = enabled ? 12 : 1
+  compressor.attack.value = 0.003
+  compressor.release.value = 1.0
+}
+
 // 平滑化済みエネルギー、L-R音量、相関からステレオ状態を判定する。
 function classifyStereo(
   eL: number,
@@ -122,6 +141,9 @@ export function useAudioMeter() {
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([])
   const [currentDeviceId, setCurrentDeviceId] = useState<string | null>(null)
   const [currentDeviceLabel, setCurrentDeviceLabel] = useState('')
+  const [outputEnabled, setOutputEnabledState] = useState(false)
+  const [compressorEnabled, setCompressorEnabledState] = useState(true)
+  const [compressorLevelDb, setCompressorLevelDbState] = useState(0)
 
   // レンダリング用の計測データ(rAFで更新)
   const [data, setData] = useState<MeterData>({
@@ -141,10 +163,17 @@ export function useAudioMeter() {
 
   const ctxRef = useRef<AudioContext | null>(null)
   const nodeRef = useRef<AudioWorkletNode | null>(null)
+  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null)
+  const compressorRef = useRef<DynamicsCompressorNode | null>(null)
+  const compressorGainRef = useRef<GainNode | null>(null)
+  const monitorGainRef = useRef<GainNode | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const latestRef = useRef<ProcessorMessage | null>(null) // worklet からの最新メッセージ
   const rafRef = useRef(0)
   const peakOverUntilRef = useRef({ l: 0, r: 0 })
+  const outputEnabledRef = useRef(false)
+  const compressorEnabledRef = useRef(true)
+  const compressorLevelDbRef = useRef(0)
 
   // rAFで維持する状態(ピークホールド・平滑化)
   const holdRef = useRef<HoldState>({ l: METER_FLOOR, r: METER_FLOOR, tL: 0, tR: 0 })
@@ -159,9 +188,44 @@ export function useAudioMeter() {
   const lastTimeRef = useRef(0)
 
   const stopStream = useCallback(() => {
+    if (sourceRef.current) {
+      try {
+        sourceRef.current.disconnect()
+      } catch {
+        /* noop */
+      }
+      sourceRef.current = null
+    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop())
       streamRef.current = null
+    }
+  }, [])
+
+  const applyAudioControls = useCallback(() => {
+    const ctx = ctxRef.current
+    const compressor = compressorRef.current
+    const compressorGain = compressorGainRef.current
+    const monitorGain = monitorGainRef.current
+
+    if (compressor) {
+      configureCompressor(compressor, compressorEnabledRef.current)
+    }
+
+    if (compressorGain) {
+      const level = compressorEnabledRef.current
+        ? dbToLinear(clamp(compressorLevelDbRef.current, COMPRESSOR_LEVEL_MIN, COMPRESSOR_LEVEL_MAX))
+        : 1
+      compressorGain.gain.value = level
+    }
+
+    if (monitorGain) {
+      const nextGain = outputEnabledRef.current ? 1 : 0
+      if (ctx) {
+        monitorGain.gain.setTargetAtTime(nextGain, ctx.currentTime, 0.015)
+      } else {
+        monitorGain.gain.value = nextGain
+      }
     }
   }, [])
 
@@ -201,9 +265,15 @@ export function useAudioMeter() {
       setCurrentDeviceLabel(track.label || '入力デバイス')
 
       const source = ctx.createMediaStreamSource(stream)
-      // 既存ノードを繋ぎ替え
+      sourceRef.current = source
+      // 入力はコンプレッサーを経由してから計測・モニター出力する
       try {
-        source.connect(node)
+        const compressor = compressorRef.current
+        if (compressor) {
+          source.connect(compressor)
+        } else {
+          source.connect(node)
+        }
       } catch {
         /* noop */
       }
@@ -236,6 +306,23 @@ export function useAudioMeter() {
         latestRef.current = e.data
       }
 
+      const compressor = ctx.createDynamicsCompressor()
+      configureCompressor(compressor, compressorEnabledRef.current)
+      compressorRef.current = compressor
+
+      const compressorGain = ctx.createGain()
+      compressorGainRef.current = compressorGain
+
+      const monitorGain = ctx.createGain()
+      monitorGain.gain.value = outputEnabledRef.current ? 1 : 0
+      monitorGainRef.current = monitorGain
+
+      compressor.connect(compressorGain)
+      compressorGain.connect(node)
+      compressorGain.connect(monitorGain)
+      monitorGain.connect(ctx.destination)
+      applyAudioControls()
+
       // グラフを駆動するため無音(ゲイン0)で destination に接続
       const zero = ctx.createGain()
       zero.gain.value = 0
@@ -264,6 +351,34 @@ export function useAudioMeter() {
       }
     },
     [connect]
+  )
+
+  const setOutputEnabled = useCallback(
+    (enabled: boolean) => {
+      outputEnabledRef.current = enabled
+      setOutputEnabledState(enabled)
+      applyAudioControls()
+    },
+    [applyAudioControls]
+  )
+
+  const setCompressorEnabled = useCallback(
+    (enabled: boolean) => {
+      compressorEnabledRef.current = enabled
+      setCompressorEnabledState(enabled)
+      applyAudioControls()
+    },
+    [applyAudioControls]
+  )
+
+  const setCompressorLevelDb = useCallback(
+    (level: number) => {
+      const next = clamp(level, COMPRESSOR_LEVEL_MIN, COMPRESSOR_LEVEL_MAX)
+      compressorLevelDbRef.current = next
+      setCompressorLevelDbState(next)
+      applyAudioControls()
+    },
+    [applyAudioControls]
   )
 
   // rAFループ: ピークホールド減衰・平滑化・状態更新
@@ -360,6 +475,9 @@ export function useAudioMeter() {
     return () => {
       cancelAnimationFrame(rafRef.current)
       stopStream()
+      monitorGainRef.current?.disconnect()
+      compressorGainRef.current?.disconnect()
+      compressorRef.current?.disconnect()
       if (ctxRef.current) ctxRef.current.close()
     }
   }, [stopStream])
@@ -370,8 +488,14 @@ export function useAudioMeter() {
     devices,
     currentDeviceId,
     currentDeviceLabel,
+    outputEnabled,
+    compressorEnabled,
+    compressorLevelDb,
     data,
     start,
     selectDevice,
+    setOutputEnabled,
+    setCompressorEnabled,
+    setCompressorLevelDb,
   }
 }

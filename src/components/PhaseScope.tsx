@@ -6,6 +6,8 @@ type PhaseScopeProps = {
 
 const PHASE_SCOPE_FLOOR_DB = -60
 const PHASE_SCOPE_MAX_VECTOR = Math.SQRT2
+const PHASE_SCOPE_DRAW_INTERVAL_MS = 100
+const PHASE_SCOPE_FADE_ALPHA = 0.14
 
 function clampUnit(value: number): number {
   return Math.max(-1, Math.min(1, value))
@@ -28,8 +30,13 @@ function logScalePoint(x: number, y: number): { x: number; y: number } {
 
 export default function PhaseScope({ samples }: PhaseScopeProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const lastDrawAtRef = useRef(0)
 
   useEffect(() => {
+    const now = performance.now()
+    if (now - lastDrawAtRef.current < PHASE_SCOPE_DRAW_INTERVAL_MS) return
+    lastDrawAtRef.current = now
+
     const canvas = canvasRef.current
     if (!canvas) return
 
@@ -37,6 +44,7 @@ export default function PhaseScope({ samples }: PhaseScopeProps) {
     const dpr = window.devicePixelRatio || 1
     const width = Math.max(1, Math.round(rect.width * dpr))
     const height = Math.max(1, Math.round(rect.height * dpr))
+    const resized = canvas.width !== width || canvas.height !== height
     if (canvas.width !== width || canvas.height !== height) {
       canvas.width = width
       canvas.height = height
@@ -45,8 +53,10 @@ export default function PhaseScope({ samples }: PhaseScopeProps) {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    ctx.clearRect(0, 0, width, height)
-    ctx.fillStyle = '#0e1012'
+    if (resized) ctx.clearRect(0, 0, width, height)
+    ctx.globalCompositeOperation = 'source-over'
+    ctx.shadowBlur = 0
+    ctx.fillStyle = resized ? '#0e1012' : `rgba(14, 16, 18, ${PHASE_SCOPE_FADE_ALPHA})`
     ctx.fillRect(0, 0, width, height)
 
     const cx = width / 2

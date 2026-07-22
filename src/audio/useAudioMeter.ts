@@ -99,18 +99,6 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
 }
 
-function dbToLinear(db: number): number {
-  return 10 ** (db / 20)
-}
-
-function configureCompressor(compressor: DynamicsCompressorNode, enabled: boolean) {
-  compressor.threshold.value = enabled ? -24 : 0
-  compressor.knee.value = enabled ? 30 : 0
-  compressor.ratio.value = enabled ? 12 : 1
-  compressor.attack.value = 0.003
-  compressor.release.value = 1.0
-}
-
 // 平滑化済みエネルギー、L-R音量、相関からステレオ状態を判定する。
 function classifyStereo(
   eL: number,
@@ -164,8 +152,6 @@ export function useAudioMeter() {
   const ctxRef = useRef<AudioContext | null>(null)
   const nodeRef = useRef<AudioWorkletNode | null>(null)
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null)
-  const compressorRef = useRef<DynamicsCompressorNode | null>(null)
-  const compressorGainRef = useRef<GainNode | null>(null)
   const monitorGainRef = useRef<GainNode | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const latestRef = useRef<ProcessorMessage | null>(null) // worklet からの最新メッセージ
@@ -204,19 +190,14 @@ export function useAudioMeter() {
 
   const applyAudioControls = useCallback(() => {
     const ctx = ctxRef.current
-    const compressor = compressorRef.current
-    const compressorGain = compressorGainRef.current
+    const node = nodeRef.current
     const monitorGain = monitorGainRef.current
 
-    if (compressor) {
-      configureCompressor(compressor, compressorEnabledRef.current)
-    }
-
-    if (compressorGain) {
-      const level = compressorEnabledRef.current
-        ? dbToLinear(clamp(compressorLevelDbRef.current, COMPRESSOR_LEVEL_MIN, COMPRESSOR_LEVEL_MAX))
-        : 1
-      compressorGain.gain.value = level
+    if (node) {
+      node.port.postMessage({
+        compressorEnabled: compressorEnabledRef.current,
+        levelDb: clamp(compressorLevelDbRef.current, COMPRESSOR_LEVEL_MIN, COMPRESSOR_LEVEL_MAX),
+      })
     }
 
     if (monitorGain) {
@@ -266,14 +247,9 @@ export function useAudioMeter() {
 
       const source = ctx.createMediaStreamSource(stream)
       sourceRef.current = source
-      // 入力はコンプレッサーを経由してから計測・モニター出力する
+      // 入力はWorklet内でコンプレッサー処理後に計測・モニター出力する
       try {
-        const compressor = compressorRef.current
-        if (compressor) {
-          source.connect(compressor)
-        } else {
-          source.connect(node)
-        }
+        source.connect(node)
       } catch {
         /* noop */
       }
@@ -299,35 +275,20 @@ export function useAudioMeter() {
       const node = new AudioWorkletNode(ctx, 'meter-processor', {
         numberOfInputs: 1,
         numberOfOutputs: 1,
-        outputChannelCount: [1],
+        outputChannelCount: [2],
       })
       nodeRef.current = node
       node.port.onmessage = (e) => {
         latestRef.current = e.data
       }
 
-      const compressor = ctx.createDynamicsCompressor()
-      configureCompressor(compressor, compressorEnabledRef.current)
-      compressorRef.current = compressor
-
-      const compressorGain = ctx.createGain()
-      compressorGainRef.current = compressorGain
-
       const monitorGain = ctx.createGain()
       monitorGain.gain.value = outputEnabledRef.current ? 1 : 0
       monitorGainRef.current = monitorGain
 
-      compressor.connect(compressorGain)
-      compressorGain.connect(node)
-      compressorGain.connect(monitorGain)
+      node.connect(monitorGain)
       monitorGain.connect(ctx.destination)
       applyAudioControls()
-
-      // グラフを駆動するため無音(ゲイン0)で destination に接続
-      const zero = ctx.createGain()
-      zero.gain.value = 0
-      node.connect(zero)
-      zero.connect(ctx.destination)
 
       await connect(null)
       if (ctx.state === 'suspended') await ctx.resume()
@@ -476,8 +437,7 @@ export function useAudioMeter() {
       cancelAnimationFrame(rafRef.current)
       stopStream()
       monitorGainRef.current?.disconnect()
-      compressorGainRef.current?.disconnect()
-      compressorRef.current?.disconnect()
+      nodeRef.current?.disconnect()
       if (ctxRef.current) ctxRef.current.close()
     }
   }, [stopStream])

@@ -130,7 +130,7 @@ export function useAudioMeter() {
   const [currentDeviceId, setCurrentDeviceId] = useState<string | null>(null)
   const [currentDeviceLabel, setCurrentDeviceLabel] = useState('')
   const [outputEnabled, setOutputEnabledState] = useState(false)
-  const [compressorEnabled, setCompressorEnabledState] = useState(true)
+  const [compressorEnabled, setCompressorEnabledState] = useState(false)
   const [compressorLevelDb, setCompressorLevelDbState] = useState(0)
 
   // レンダリング用の計測データ(rAFで更新)
@@ -158,7 +158,7 @@ export function useAudioMeter() {
   const rafRef = useRef(0)
   const peakOverUntilRef = useRef({ l: 0, r: 0 })
   const outputEnabledRef = useRef(false)
-  const compressorEnabledRef = useRef(true)
+  const compressorEnabledRef = useRef(false)
   const compressorLevelDbRef = useRef(0)
 
   // rAFで維持する状態(ピークホールド・平滑化)
